@@ -1,0 +1,163 @@
+.app {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: linear-gradient(135deg, #646cff, #747bff);
+  color: white;
+  margin-bottom: 2rem;
+}
+
+.app-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+.app-header p {
+  margin: 0;
+  font-size: 1.1rem;
+  opacity: 0.9;
+}
+
+.app-main {
+  flex: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  width: 100%;
+}
+
+.input-section {
+  max-width: 600px;
+  margin: 0 auto 2rem auto;
+}
+
+.generate-section {
+  text-align: center;
+  margin: 2rem 0;
+}
+
+.generate-button {
+  padding: 1rem 2rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  min-width: 300px;
+}
+
+.generate-button.ready {
+  background: linear-gradient(135deg, #4CAF50, #45a049);
+  color: white;
+  box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+}
+
+.generate-button.ready:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+}
+
+.generate-button.disabled {
+  background: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.progress-message {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #e3f2fd;
+  border-radius: 8px;
+  color: #1976d2;
+  font-weight: 500;
+  border-left: 4px solid #2196f3;
+}
+
+.config-reminder {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: #fff3e0;
+  border-radius: 8px;
+  color: #ef6c00;
+  font-weight: 500;
+  border-left: 4px solid #ff9800;
+  text-align: center;
+}
+
+.error-section {
+  margin-top: 1rem;
+}
+
+.error-message {
+  padding: 1rem;
+  background: #ffebee;
+  border: 1px solid #ffcdd2;
+  border-radius: 8px;
+  color: #c62828;
+  font-weight: 500;
+  border-left: 4px solid #f44336;
+}
+
+.app-footer {
+  text-align: center;
+  padding: 2rem 1rem;
+  background: #f8f9fa;
+  color: #666;
+  margin-top: 3rem;
+  border-top: 1px solid #eee;
+}
+
+.app-footer p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .app-header h1 {
+    font-size: 2rem;
+  }
+
+  .app-header p {
+    font-size: 1rem;
+  }
+
+  .generate-button {
+    min-width: auto;
+    width: 100%;
+    padding: 1rem;
+    font-size: 1rem;
+  }
+
+  .app-main {
+    padding: 0 0.5rem;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .progress-message {
+    background: #1a2a3a;
+    color: #4a9eff;
+    border-left-color: #4a9eff;
+  }
+
+  .error-message {
+    background: #2a1a1a;
+    border-color: #4a2a2a;
+    color: #ff6666;
+    border-left-color: #ff4444;
+  }
+
+  .app-footer {
+    background: #1a1a1a;
+    color: #ccc;
+    border-top-color: #333;
+  }
+}

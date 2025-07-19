@@ -1,0 +1,209 @@
+import axios from 'axios'
+
+// Configuration for the Replicate API
+const API_CONFIG = {
+  baseURL: 'https://api.replicate.com/v1',
+  timeout: 300000, // 5 minutes timeout for 3D generation
+  apiToken: '', // Set your Replicate API token here
+}
+
+// Create axios instance with default config
+const apiClient = axios.create({
+  baseURL: API_CONFIG.baseURL,
+  timeout: API_CONFIG.timeout,
+  headers: {
+    'Authorization': `Bearer ${API_CONFIG.apiToken}`,
+    'Content-Type': 'application/json',
+  }
+})
+
+/**
+ * Convert file to data URL for Replicate API
+ * @param {File} file - The image file to convert
+ * @returns {Promise<string>} Data URL string
+ */
+const fileToDataURL = (file) => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => {
+      // Replicate expects full data URL (data:image/png;base64,...)
+      resolve(reader.result)
+    }
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
+/**
+ * Generate 3D model from image using Replicate Hunyuan3D API
+ * @param {File} imageFile - The uploaded image file
+ * @param {string} description - Optional description of the image
+ * @param {Object} options - Additional generation options
+ * @returns {Promise<Blob>} The generated GLB file as a blob
+ */
+export const generateModel = async (imageFile, description = '', options = {}) => {
+  try {
+    // Check if API token is set
+    if (!API_CONFIG.apiToken) {
+      throw new Error('Replicate API token not configured. Please set your API token in the service configuration.')
+    }
+
+    // Convert image to data URL
+    const imageDataURL = await fileToDataURL(imageFile)
+
+    console.log('Starting 3D model generation with Replicate...')
+
+    // Step 1: Create prediction using official Tencent model
+    const predictionResponse = await apiClient.post('/predictions', {
+      version: 'b1b9449a1277e10402781c5d41eb30c0a0683504fb23fab591ca9dfc2aabe1cb',
+      input: {
+        image_path: imageDataURL,
+        seed: options.seed || Math.floor(Math.random() * 1000000),
+        do_remove_background: true,
+        sample_steps: options.numInferenceSteps || 30,
+        sample_seed: options.seed || Math.floor(Math.random() * 1000000)
+      }
+    })
+
+    const prediction = predictionResponse.data
+    console.log('Prediction created:', prediction.id)
+
+    // Step 2: Poll for completion
+    let result = prediction
+    while (result.status === 'starting' || result.status === 'processing') {
+      console.log(`Status: ${result.status}...`)
+      await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
+
+      const statusResponse = await apiClient.get(`/predictions/${prediction.id}`)
+      result = statusResponse.data
+    }
+
+    if (result.status === 'failed') {
+      throw new Error(`Generation failed: ${result.error || 'Unknown error'}`)
+    }
+
+    if (result.status !== 'succeeded' || !result.output) {
+      throw new Error('Generation did not complete successfully')
+    }
+
+    console.log('3D model generated successfully')
+
+    // Step 3: Download the GLB file
+    const glbUrl = result.output
+    const glbResponse = await fetch(glbUrl)
+
+    if (!glbResponse.ok) {
+      throw new Error('Failed to download generated model')
+    }
+
+    return await glbResponse.blob() // Return the GLB file as a blob
+    
+  } catch (error) {
+    console.error('Error generating 3D model:', error)
+
+    if (error.response) {
+      // Server responded with error status
+      const status = error.response.status
+      const message = error.response.data?.detail || error.response.data?.message || error.response.statusText
+
+      if (status === 401) {
+        throw new Error('Invalid API token. Please check your Replicate API token and try again.')
+      } else if (status === 403) {
+        throw new Error('API token does not have required permissions. Please check your Replicate account.')
+      } else if (status === 404) {
+        throw new Error('Model not found. The Hunyuan3D-2 model may not be available.')
+      } else if (status === 429) {
+        throw new Error('Rate limit exceeded. Please wait a moment and try again.')
+      } else if (status >= 500) {
+        throw new Error('Server error occurred during 3D model generation. Please try again.')
+      } else {
+        throw new Error(`Generation failed: ${message}`)
+      }
+    } else if (error.request) {
+      // Request was made but no response received
+      throw new Error('Unable to connect to Replicate API. Please check your internet connection.')
+    } else {
+      // Something else happened
+      throw new Error(`Unexpected error: ${error.message}`)
+    }
+  }
+}
+
+/**
+ * Validate Replicate API token format
+ * @param {string} token - The API token to validate
+ * @returns {boolean} True if token format is valid
+ */
+export const validateTokenFormat = (token) => {
+  if (!token || typeof token !== 'string') {
+    return false
+  }
+
+  // Replicate tokens start with 'r8_' and are followed by 40 characters
+  const tokenRegex = /^r8_[a-zA-Z0-9]{40}$/
+  return tokenRegex.test(token)
+}
+
+/**
+ * Check if the Replicate API is available and token is valid
+ * Note: Due to CORS restrictions, we can't validate tokens directly from browser
+ * @returns {Promise<boolean>} True if API is available
+ */
+export const checkServerStatus = async () => {
+  try {
+    if (!API_CONFIG.apiToken) {
+      console.warn('Replicate API token not configured')
+      return false
+    }
+
+    // First check token format
+    if (!validateTokenFormat(API_CONFIG.apiToken)) {
+      console.error('Invalid token format. Replicate tokens should start with "r8_" followed by 40 characters.')
+      return false
+    }
+
+    console.log('Token format is valid. Note: Full validation will occur during first API call due to CORS restrictions.')
+
+    // For now, we'll assume the token is valid if the format is correct
+    // The actual validation will happen when we make the first API call
+    return true
+
+  } catch (error) {
+    console.error('Token validation failed:', error)
+    return false
+  }
+}
+
+/**
+ * Set custom API configuration
+ * @param {Object} config - New configuration
+ */
+export const setApiConfig = (config) => {
+  Object.assign(API_CONFIG, config)
+
+  // Update axios instance
+  apiClient.defaults.baseURL = API_CONFIG.baseURL
+  apiClient.defaults.timeout = API_CONFIG.timeout
+
+  // Update authorization header if token changed
+  if (config.apiToken) {
+    apiClient.defaults.headers['Authorization'] = `Bearer ${config.apiToken}`
+  }
+}
+
+/**
+ * Set Replicate API token
+ * @param {string} token - Replicate API token
+ */
+export const setApiToken = (token) => {
+  API_CONFIG.apiToken = token
+  apiClient.defaults.headers['Authorization'] = `Bearer ${token}`
+}
+
+/**
+ * Get current API configuration
+ * @returns {Object} Current configuration
+ */
+export const getApiConfig = () => {
+  return { ...API_CONFIG }
+}
