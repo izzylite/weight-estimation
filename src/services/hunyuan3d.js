@@ -51,9 +51,6 @@ export const generateModel = async (imageFile, description = '') => {
     // Convert image to data URL
     const imageDataURL = await fileToDataURL(imageFile)
 
-    console.log('Starting 3D model generation with Replicate...')
-    console.log('Using API endpoint:', API_CONFIG.baseURL)
-
     // Step 1: Create prediction using official Tencent model
     const predictionPayload = {
       version: 'b1b9449a1277e10402781c5d41eb30c0a0683504fb23fab591ca9dfc2aabe1cb',
@@ -62,16 +59,12 @@ export const generateModel = async (imageFile, description = '') => {
       }
     }
 
-    console.log('Sending prediction request:', predictionPayload)
     const predictionResponse = await apiClient.post('/predictions', predictionPayload)
-
     const prediction = predictionResponse.data
-    console.log('Prediction created:', prediction.id)
 
     // Step 2: Poll for completion
     let result = prediction
     while (result.status === 'starting' || result.status === 'processing') {
-      console.log(`Status: ${result.status}...`)
       await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
 
       const statusResponse = await apiClient.get(`/predictions/${prediction.id}`)
@@ -86,12 +79,8 @@ export const generateModel = async (imageFile, description = '') => {
       throw new Error('Generation did not complete successfully')
     }
 
-    console.log('3D model generated successfully')
-    console.log('GLB URL:', result.output)
-
     // Step 3: Download the GLB file
     const glbUrl = result.output
-    console.log('GLB URL type:', typeof glbUrl, 'Value:', glbUrl)
 
     // Handle different types of output (string URL or object)
     let downloadUrl
@@ -100,7 +89,6 @@ export const generateModel = async (imageFile, description = '') => {
     } else if (glbUrl && typeof glbUrl === 'object') {
       // The API returns an object like {mesh: "https://replicate.delivery/..."}
       downloadUrl = glbUrl.mesh || glbUrl.url || glbUrl.href || glbUrl.toString()
-      console.log('Extracted URL from object:', downloadUrl)
     } else {
       throw new Error('Invalid GLB URL format received from API')
     }
@@ -109,25 +97,18 @@ export const generateModel = async (imageFile, description = '') => {
       throw new Error(`Could not extract valid URL from API response: ${JSON.stringify(glbUrl)}`)
     }
 
-    console.log('Downloading GLB from:', downloadUrl)
-
     // Try to download the GLB file with multiple strategies
     let glbResponse
     try {
-      console.log('Attempting to download GLB file...')
 
       // Strategy 1: Try proxy first for replicate.delivery URLs (most likely to work)
       if (downloadUrl.includes('replicate.delivery')) {
         try {
-          console.log('Strategy 1: Using proxy for replicate.delivery')
           const proxyUrl = downloadUrl.replace('https://replicate.delivery', '/api/download')
-          console.log('Proxy URL:', proxyUrl)
-
           glbResponse = await fetch(proxyUrl)
 
           if (glbResponse.ok) {
             const contentType = glbResponse.headers.get('content-type')
-            console.log('Proxy download successful, content-type:', contentType)
 
             // Check if we got HTML instead of binary data
             if (contentType && contentType.includes('text/html')) {
@@ -137,10 +118,7 @@ export const generateModel = async (imageFile, description = '') => {
             throw new Error(`Proxy HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
           }
         } catch (proxyError) {
-          console.log('Proxy download failed:', proxyError.message)
-
           // Strategy 2: Fallback to direct download
-          console.log('Strategy 2: Fallback to direct download')
           glbResponse = await fetch(downloadUrl, {
             mode: 'cors',
             credentials: 'omit'
@@ -151,7 +129,6 @@ export const generateModel = async (imageFile, description = '') => {
           }
 
           const contentType = glbResponse.headers.get('content-type')
-          console.log('Direct download content-type:', contentType)
 
           if (contentType && contentType.includes('text/html')) {
             throw new Error('Direct download returned HTML instead of binary data')
@@ -159,7 +136,6 @@ export const generateModel = async (imageFile, description = '') => {
         }
       } else {
         // For non-replicate.delivery URLs, try direct download only
-        console.log('Strategy 1: Direct download for non-replicate URL')
         glbResponse = await fetch(downloadUrl, {
           mode: 'cors',
           credentials: 'omit'
@@ -170,7 +146,6 @@ export const generateModel = async (imageFile, description = '') => {
         }
 
         const contentType = glbResponse.headers.get('content-type')
-        console.log('Direct download content-type:', contentType)
 
         if (contentType && contentType.includes('text/html')) {
           throw new Error('Got HTML instead of binary data - CORS issue')
@@ -178,28 +153,12 @@ export const generateModel = async (imageFile, description = '') => {
       }
 
     } catch (error) {
-      console.error('All download strategies failed:', error.message)
       throw new Error(`Failed to download GLB file: ${error.message}. The model was generated successfully, but the file download encountered restrictions.`)
     }
 
     return await glbResponse.blob() // Return the GLB file as a blob
     
   } catch (error) {
-    console.error('Error generating 3D model:', error)
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      config: error.config ? {
-        url: error.config.url,
-        method: error.config.method,
-        baseURL: error.config.baseURL
-      } : 'No config',
-      response: error.response ? {
-        status: error.response.status,
-        statusText: error.response.statusText,
-        data: error.response.data
-      } : 'No response'
-    })
 
     if (error.response) {
       // Server responded with error status
@@ -235,8 +194,6 @@ export const generateModel = async (imageFile, description = '') => {
  */
 export const testProxy = async () => {
   try {
-    console.log('Testing proxy connectivity...')
-
     // Test with a simple request that should return 401 (unauthorized) if proxy works
     const response = await fetch('/api/replicate/account', {
       method: 'GET',
@@ -246,23 +203,10 @@ export const testProxy = async () => {
       },
     })
 
-    console.log('Proxy test response:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url,
-      headers: Object.fromEntries(response.headers.entries())
-    })
-
     // Even if we get 401 (unauthorized), it means the proxy is working
     // If we get network errors, the proxy isn't working
     return response.status === 401 || response.status === 200 || response.status === 403
   } catch (error) {
-    console.error('Proxy test failed:', error.message)
-    console.error('Error details:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    })
     return false
   }
 }
@@ -273,8 +217,6 @@ export const testProxy = async () => {
  */
 export const testBasicConnectivity = async () => {
   try {
-    console.log('Testing basic connectivity...')
-
     // Test a simple GET request to the proxy endpoint
     const response = await fetch('/api/replicate', {
       method: 'GET',
@@ -283,16 +225,9 @@ export const testBasicConnectivity = async () => {
       },
     })
 
-    console.log('Basic connectivity test:', {
-      status: response.status,
-      statusText: response.statusText,
-      url: response.url
-    })
-
     // Any response (even 401) means the proxy is working
     return response.status >= 200 && response.status < 600
   } catch (error) {
-    console.error('Basic connectivity test failed:', error.message)
     return false
   }
 }
@@ -304,16 +239,12 @@ export const testBasicConnectivity = async () => {
 export const checkServerStatus = async () => {
   try {
     if (!API_CONFIG.apiToken) {
-      console.warn('Replicate API token not configured')
       return false
     }
-
-    console.log('Validating token with Replicate API...')
 
     // First test if proxy is working
     const proxyWorking = await testProxy()
     if (!proxyWorking) {
-      console.error('Proxy is not working properly')
       return false
     }
 
@@ -329,7 +260,6 @@ export const checkServerStatus = async () => {
         },
       })
     } catch (proxyError) {
-      console.log('Proxy failed, trying direct API call...')
       // Fallback to direct API call
       response = await fetch('https://api.replicate.com/v1/account', {
         method: 'GET',
@@ -351,17 +281,10 @@ export const checkServerStatus = async () => {
       }
     }
 
-    const data = await response.json()
-    console.log('Token validation successful:', data)
+    await response.json()
     return true
 
   } catch (error) {
-    console.error('Token validation failed:', error)
-
-    if (error.name === 'TypeError' && error.message.includes('fetch')) {
-      console.error('Network error - this might be a CORS issue or network connectivity problem')
-    }
-
     return false
   }
 }
@@ -428,6 +351,5 @@ export const debugApiConnection = async () => {
     debug.error = error.message
   }
 
-  console.log('API Debug Info:', debug)
   return debug
 }

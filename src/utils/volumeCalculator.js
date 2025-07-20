@@ -107,7 +107,7 @@ export const calculateModelVolume = (model) => {
         const meshVolume = calculateMeshVolume(child)
         totalVolume += meshVolume
       } catch (error) {
-        console.warn(`Failed to calculate volume for mesh: ${error.message}`)
+        // Skip meshes that can't be processed
       }
     }
   })
@@ -143,10 +143,7 @@ export const getModelDimensions = (model) => {
  */
 export const analyzeModelVolume = async (glbBlob) => {
   try {
-    console.log('Loading GLB model for volume analysis...')
     const model = await loadGLBModel(glbBlob)
-    
-    console.log('Calculating model volume...')
     const volume = calculateModelVolume(model)
     const dimensions = getModelDimensions(model)
     
@@ -176,12 +173,10 @@ export const analyzeModelVolume = async (glbBlob) => {
       totalFaces: Math.floor(totalFaces),
       model: model // Include the loaded model for display
     }
-    
-    console.log('Volume analysis complete:', result)
+
     return result
     
   } catch (error) {
-    console.error('Error analyzing model volume:', error)
     throw new Error(`Volume analysis failed: ${error.message}`)
   }
 }

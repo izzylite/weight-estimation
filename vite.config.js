@@ -18,9 +18,6 @@ export default defineConfig({
           proxy.on('error', (err, _req, _res) => {
             console.log('Replicate proxy error:', err.message);
           });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Proxying request to Replicate:', req.method, req.url);
-          });
         },
       },
       '/api/download': {
@@ -32,9 +29,6 @@ export default defineConfig({
         configure: (proxy, _options) => {
           proxy.on('error', (err, _req, _res) => {
             console.log('Download proxy error:', err.message);
-          });
-          proxy.on('proxyReq', (proxyReq, req, _res) => {
-            console.log('Proxying download request:', req.method, req.url);
           });
         },
       }

@@ -26,7 +26,6 @@ const ApiConfig = ({ onConfigChange }) => {
       setIsValid(valid)
       onConfigChange?.(valid)
     } catch (error) {
-      console.error('Token validation error:', error)
       setIsValid(false)
       onConfigChange?.(false)
     } finally {
