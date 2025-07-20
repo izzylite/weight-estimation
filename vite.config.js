@@ -22,10 +22,13 @@ export default defineConfig({
         rewrite: (path) => path.replace(/^\/api\/download/, ''),
         configure: (proxy, options) => {
           proxy.on('error', (err, req, res) => {
-            console.log('Proxy error:', err)
+            console.log('Proxy error:', err.message)
           })
           proxy.on('proxyReq', (proxyReq, req, res) => {
-            console.log('Proxying request to:', proxyReq.path)
+            console.log('Proxying request to:', `${options.target}${proxyReq.path}`)
+          })
+          proxy.on('proxyRes', (proxyRes, req, res) => {
+            console.log('Proxy response:', proxyRes.statusCode, proxyRes.headers['content-type'])
           })
         }
       }
