@@ -236,19 +236,33 @@ export const generateModel = async (imageFile, description = '') => {
 export const testProxy = async () => {
   try {
     console.log('Testing proxy connectivity...')
+
+    // Test with a simple request that should return 401 (unauthorized) if proxy works
     const response = await fetch('/api/replicate/account', {
       method: 'GET',
       headers: {
-        'Authorization': 'Bearer test',
+        'Authorization': 'Bearer test-token',
         'Content-Type': 'application/json',
       },
     })
 
-    console.log('Proxy test response:', response.status, response.statusText)
+    console.log('Proxy test response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      headers: Object.fromEntries(response.headers.entries())
+    })
+
     // Even if we get 401 (unauthorized), it means the proxy is working
-    return response.status === 401 || response.status === 200
+    // If we get network errors, the proxy isn't working
+    return response.status === 401 || response.status === 200 || response.status === 403
   } catch (error) {
-    console.error('Proxy test failed:', error)
+    console.error('Proxy test failed:', error.message)
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    })
     return false
   }
 }
