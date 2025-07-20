@@ -91,33 +91,74 @@ export const generateModel = async (imageFile, description = '') => {
 
     // Step 3: Download the GLB file
     const glbUrl = result.output
-    console.log('Downloading GLB from:', glbUrl)
+    console.log('GLB URL type:', typeof glbUrl, 'Value:', glbUrl)
 
-    // Try to download the GLB file using proxy for CORS bypass
+    // Handle different types of output (string URL or object)
+    let downloadUrl
+    if (typeof glbUrl === 'string') {
+      downloadUrl = glbUrl
+    } else if (glbUrl && typeof glbUrl === 'object') {
+      // Sometimes the output is an object with a URL property
+      downloadUrl = glbUrl.url || glbUrl.href || glbUrl.toString()
+    } else {
+      throw new Error('Invalid GLB URL format received from API')
+    }
+
+    console.log('Downloading GLB from:', downloadUrl)
+
+    // Try to download the GLB file with multiple strategies
     let glbResponse
     try {
-      // Check if the URL is from replicate.delivery and use proxy
-      if (glbUrl.includes('replicate.delivery')) {
-        const proxyUrl = glbUrl.replace('https://replicate.delivery', '/api/download')
-        console.log('Using proxy URL:', proxyUrl)
-        glbResponse = await fetch(proxyUrl)
-      } else {
-        // Try direct download for other URLs
-        glbResponse = await fetch(glbUrl)
-      }
+      console.log('Attempting to download GLB file...')
 
-      if (!glbResponse.ok) {
-        throw new Error(`HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
-      }
+      // Strategy 1: Try direct download first (might work for some URLs)
+      try {
+        console.log('Strategy 1: Direct download')
+        glbResponse = await fetch(downloadUrl, {
+          mode: 'cors',
+          credentials: 'omit'
+        })
 
-      // Check if we got HTML instead of binary data (CORS error)
-      const contentType = glbResponse.headers.get('content-type')
-      if (contentType && contentType.includes('text/html')) {
-        throw new Error('Received HTML instead of GLB file - likely a CORS issue')
+        if (glbResponse.ok) {
+          const contentType = glbResponse.headers.get('content-type')
+          console.log('Direct download successful, content-type:', contentType)
+
+          // Check if we got HTML instead of binary data
+          if (contentType && contentType.includes('text/html')) {
+            throw new Error('Got HTML instead of binary data')
+          }
+        } else {
+          throw new Error(`HTTP ${glbResponse.status}`)
+        }
+      } catch (directError) {
+        console.log('Direct download failed:', directError.message)
+
+        // Strategy 2: Try proxy if direct fails and URL is from replicate.delivery
+        if (downloadUrl.includes && downloadUrl.includes('replicate.delivery')) {
+          console.log('Strategy 2: Using proxy for replicate.delivery')
+          const proxyUrl = downloadUrl.replace('https://replicate.delivery', '/api/download')
+          console.log('Proxy URL:', proxyUrl)
+
+          glbResponse = await fetch(proxyUrl)
+
+          if (!glbResponse.ok) {
+            throw new Error(`Proxy download failed: HTTP ${glbResponse.status}`)
+          }
+
+          const contentType = glbResponse.headers.get('content-type')
+          console.log('Proxy download content-type:', contentType)
+
+          if (contentType && contentType.includes('text/html')) {
+            throw new Error('Proxy returned HTML instead of binary data')
+          }
+        } else {
+          // Re-throw the original error if we can't use proxy
+          throw directError
+        }
       }
 
     } catch (error) {
-      console.log('GLB download failed:', error.message)
+      console.error('All download strategies failed:', error.message)
       throw new Error(`Failed to download GLB file: ${error.message}. The model was generated successfully, but the file download encountered restrictions.`)
     }
 

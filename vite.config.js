@@ -20,10 +20,13 @@ export default defineConfig({
         target: 'https://replicate.delivery',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/download/, ''),
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET',
-          'Access-Control-Allow-Headers': 'Content-Type',
+        configure: (proxy, options) => {
+          proxy.on('error', (err, req, res) => {
+            console.log('Proxy error:', err)
+          })
+          proxy.on('proxyReq', (proxyReq, req, res) => {
+            console.log('Proxying request to:', proxyReq.path)
+          })
         }
       }
     }
