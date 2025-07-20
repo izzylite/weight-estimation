@@ -5,18 +5,38 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   server: {
+    port: 5176,
+    strictPort: false, // Allow Vite to use alternative ports if 5176 is busy
     proxy: {
       '/api/replicate': {
         target: 'https://api.replicate.com/v1',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/replicate/, ''),
-        secure: true
+        secure: true,
+        ws: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Replicate proxy error:', err.message);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Proxying request to Replicate:', req.method, req.url);
+          });
+        },
       },
       '/api/download': {
         target: 'https://replicate.delivery',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api\/download/, ''),
-        secure: true
+        secure: true,
+        ws: false,
+        configure: (proxy, _options) => {
+          proxy.on('error', (err, _req, _res) => {
+            console.log('Download proxy error:', err.message);
+          });
+          proxy.on('proxyReq', (proxyReq, req, _res) => {
+            console.log('Proxying download request:', req.method, req.url);
+          });
+        },
       }
     }
   }

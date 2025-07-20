@@ -4,7 +4,7 @@ import DescriptionInput from './components/DescriptionInput'
 import ModelViewer from './components/ModelViewer'
 import LoadingSpinner from './components/LoadingSpinner'
 import ApiConfig from './components/ApiConfig'
-import { generateModel } from './services/hunyuan3d'
+import { generateModel, debugApiConnection } from './services/hunyuan3d'
 import { analyzeModelVolume } from './utils/volumeCalculator'
 import './App.css'
 
@@ -33,6 +33,27 @@ function App() {
   const handleApiConfigChange = useCallback((isValid) => {
     setIsApiConfigured(isValid)
   }, [])
+
+  const handleDebugConnection = async () => {
+    console.log('🔍 Running connection debug test...')
+    try {
+      const debugInfo = await debugApiConnection()
+      console.log('Debug results:', debugInfo)
+
+      // Show results in an alert for easy viewing
+      const results = [
+        `Basic Connectivity: ${debugInfo.basicConnectivity ? '✅ Working' : '❌ Failed'}`,
+        `Proxy Test: ${debugInfo.proxyTest ? '✅ Working' : '❌ Failed'}`,
+        `Token Test: ${debugInfo.tokenTest ? '✅ Valid' : debugInfo.config.apiToken ? '❌ Invalid' : '⚠️ Not Set'}`,
+        `Error: ${debugInfo.error || 'None'}`
+      ].join('\n')
+
+      alert(`Connection Debug Results:\n\n${results}`)
+    } catch (error) {
+      console.error('Debug test failed:', error)
+      alert(`Debug test failed: ${error.message}`)
+    }
+  }
 
   const handleGenerate = async () => {
     if (!uploadedImage) {
@@ -94,6 +115,27 @@ function App() {
       <main className="app-main">
         <div className="input-section">
           <ApiConfig onConfigChange={handleApiConfigChange} />
+
+          <div className="debug-section" style={{ marginBottom: '1rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #dee2e6' }}>
+            <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#6c757d' }}>🔧 Debug Tools</h4>
+            <button
+              onClick={handleDebugConnection}
+              style={{
+                padding: '0.5rem 1rem',
+                background: '#6c757d',
+                color: 'white',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '0.8rem'
+              }}
+            >
+              🔍 Test Connection
+            </button>
+            <small style={{ marginLeft: '0.5rem', color: '#6c757d' }}>
+              Check proxy and API connectivity
+            </small>
+          </div>
 
           <ImageUpload
             onImageUpload={handleImageUpload}

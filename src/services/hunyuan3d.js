@@ -268,6 +268,36 @@ export const testProxy = async () => {
 }
 
 /**
+ * Simple connectivity test that doesn't require authentication
+ * @returns {Promise<boolean>} True if basic connectivity works
+ */
+export const testBasicConnectivity = async () => {
+  try {
+    console.log('Testing basic connectivity...')
+
+    // Test a simple GET request to the proxy endpoint
+    const response = await fetch('/api/replicate', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    })
+
+    console.log('Basic connectivity test:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url
+    })
+
+    // Any response (even 401) means the proxy is working
+    return response.status >= 200 && response.status < 600
+  } catch (error) {
+    console.error('Basic connectivity test failed:', error.message)
+    return false
+  }
+}
+
+/**
  * Check if the Replicate API is available and token is valid
  * @returns {Promise<boolean>} True if API is available
  */
@@ -377,12 +407,16 @@ export const getApiConfig = () => {
 export const debugApiConnection = async () => {
   const debug = {
     config: getApiConfig(),
+    basicConnectivity: null,
     proxyTest: null,
     tokenTest: null,
     error: null
   }
 
   try {
+    // Test basic connectivity first
+    debug.basicConnectivity = await testBasicConnectivity()
+
     // Test proxy
     debug.proxyTest = await testProxy()
 
