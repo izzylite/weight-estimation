@@ -15,6 +15,16 @@ export default defineConfig({
           'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
           'Access-Control-Allow-Headers': 'Content-Type, Authorization',
         }
+      },
+      '/api/download': {
+        target: 'https://replicate.delivery',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/download/, ''),
+        headers: {
+          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Methods': 'GET',
+          'Access-Control-Allow-Headers': 'Content-Type',
+        }
       }
     }
   }

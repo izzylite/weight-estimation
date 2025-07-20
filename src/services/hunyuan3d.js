@@ -87,13 +87,38 @@ export const generateModel = async (imageFile, description = '') => {
     }
 
     console.log('3D model generated successfully')
+    console.log('GLB URL:', result.output)
 
     // Step 3: Download the GLB file
     const glbUrl = result.output
-    const glbResponse = await fetch(glbUrl)
+    console.log('Downloading GLB from:', glbUrl)
 
-    if (!glbResponse.ok) {
-      throw new Error('Failed to download generated model')
+    // Try to download the GLB file using proxy for CORS bypass
+    let glbResponse
+    try {
+      // Check if the URL is from replicate.delivery and use proxy
+      if (glbUrl.includes('replicate.delivery')) {
+        const proxyUrl = glbUrl.replace('https://replicate.delivery', '/api/download')
+        console.log('Using proxy URL:', proxyUrl)
+        glbResponse = await fetch(proxyUrl)
+      } else {
+        // Try direct download for other URLs
+        glbResponse = await fetch(glbUrl)
+      }
+
+      if (!glbResponse.ok) {
+        throw new Error(`HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
+      }
+
+      // Check if we got HTML instead of binary data (CORS error)
+      const contentType = glbResponse.headers.get('content-type')
+      if (contentType && contentType.includes('text/html')) {
+        throw new Error('Received HTML instead of GLB file - likely a CORS issue')
+      }
+
+    } catch (error) {
+      console.log('GLB download failed:', error.message)
+      throw new Error(`Failed to download GLB file: ${error.message}. The model was generated successfully, but the file download encountered restrictions.`)
     }
 
     return await glbResponse.blob() // Return the GLB file as a blob
