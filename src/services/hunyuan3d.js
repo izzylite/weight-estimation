@@ -41,7 +41,7 @@ const fileToDataURL = (file) => {
  * @param {Object} options - Additional generation options
  * @returns {Promise<Blob>} The generated GLB file as a blob
  */
-export const generateModel = async (imageFile, description = '', options = {}) => {
+export const generateModel = async (imageFile, description = '') => {
   try {
     // Check if API token is set
     if (!API_CONFIG.apiToken) {
@@ -52,18 +52,18 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     const imageDataURL = await fileToDataURL(imageFile)
 
     console.log('Starting 3D model generation with Replicate...')
+    console.log('Using API endpoint:', API_CONFIG.baseURL)
 
     // Step 1: Create prediction using official Tencent model
-    const predictionResponse = await apiClient.post('/predictions', {
+    const predictionPayload = {
       version: 'b1b9449a1277e10402781c5d41eb30c0a0683504fb23fab591ca9dfc2aabe1cb',
       input: {
-        image_path: imageDataURL,
-        seed: options.seed || Math.floor(Math.random() * 1000000),
-        do_remove_background: true,
-        sample_steps: options.numInferenceSteps || 30,
-        sample_seed: options.seed || Math.floor(Math.random() * 1000000)
+        image: imageDataURL  // Simplified input - just the image
       }
-    })
+    }
+
+    console.log('Sending prediction request:', predictionPayload)
+    const predictionResponse = await apiClient.post('/predictions', predictionPayload)
 
     const prediction = predictionResponse.data
     console.log('Prediction created:', prediction.id)
@@ -100,6 +100,20 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     
   } catch (error) {
     console.error('Error generating 3D model:', error)
+    console.error('Error details:', {
+      message: error.message,
+      code: error.code,
+      config: error.config ? {
+        url: error.config.url,
+        method: error.config.method,
+        baseURL: error.config.baseURL
+      } : 'No config',
+      response: error.response ? {
+        status: error.response.status,
+        statusText: error.response.statusText,
+        data: error.response.data
+      } : 'No response'
+    })
 
     if (error.response) {
       // Server responded with error status
@@ -121,11 +135,35 @@ export const generateModel = async (imageFile, description = '', options = {}) =
       }
     } else if (error.request) {
       // Request was made but no response received
-      throw new Error('Unable to connect to Replicate API. Please check your internet connection.')
+      throw new Error('Unable to connect to Replicate API. Please check your internet connection and ensure the development server proxy is working.')
     } else {
       // Something else happened
       throw new Error(`Unexpected error: ${error.message}`)
     }
+  }
+}
+
+/**
+ * Test proxy connectivity
+ * @returns {Promise<boolean>} True if proxy is working
+ */
+export const testProxy = async () => {
+  try {
+    console.log('Testing proxy connectivity...')
+    const response = await fetch('/api/replicate/account', {
+      method: 'GET',
+      headers: {
+        'Authorization': 'Bearer test',
+        'Content-Type': 'application/json',
+      },
+    })
+
+    console.log('Proxy test response:', response.status, response.statusText)
+    // Even if we get 401 (unauthorized), it means the proxy is working
+    return response.status === 401 || response.status === 200
+  } catch (error) {
+    console.error('Proxy test failed:', error)
+    return false
   }
 }
 
@@ -142,14 +180,36 @@ export const checkServerStatus = async () => {
 
     console.log('Validating token with Replicate API...')
 
-    // Use the proxy endpoint to avoid CORS issues
-    const response = await fetch('/api/replicate/account', {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${API_CONFIG.apiToken}`,
-        'Content-Type': 'application/json',
-      },
-    })
+    // First test if proxy is working
+    const proxyWorking = await testProxy()
+    if (!proxyWorking) {
+      console.error('Proxy is not working properly')
+      return false
+    }
+
+    // Try proxy first, then fallback to direct API call
+    let response
+    try {
+      // Try using the proxy endpoint first
+      response = await fetch('/api/replicate/account', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${API_CONFIG.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+      })
+    } catch (proxyError) {
+      console.log('Proxy failed, trying direct API call...')
+      // Fallback to direct API call
+      response = await fetch('https://api.replicate.com/v1/account', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${API_CONFIG.apiToken}`,
+          'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+      })
+    }
 
     if (!response.ok) {
       if (response.status === 401) {
@@ -208,4 +268,32 @@ export const setApiToken = (token) => {
  */
 export const getApiConfig = () => {
   return { ...API_CONFIG }
+}
+
+/**
+ * Debug function to test API connectivity
+ * @returns {Promise<Object>} Debug information
+ */
+export const debugApiConnection = async () => {
+  const debug = {
+    config: getApiConfig(),
+    proxyTest: null,
+    tokenTest: null,
+    error: null
+  }
+
+  try {
+    // Test proxy
+    debug.proxyTest = await testProxy()
+
+    // Test token if available
+    if (API_CONFIG.apiToken) {
+      debug.tokenTest = await checkServerStatus()
+    }
+  } catch (error) {
+    debug.error = error.message
+  }
+
+  console.log('API Debug Info:', debug)
+  return debug
 }
