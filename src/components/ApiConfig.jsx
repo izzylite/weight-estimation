@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { setApiToken, checkServerStatus, validateTokenFormat } from '../services/hunyuan3d'
+import { setApiToken, checkServerStatus } from '../services/hunyuan3d'
 import './ApiConfig.css'
 
 const ApiConfig = ({ onConfigChange }) => {
@@ -21,13 +21,6 @@ const ApiConfig = ({ onConfigChange }) => {
   const validateToken = async (tokenToValidate) => {
     setIsChecking(true)
     try {
-      // First check format
-      if (!validateTokenFormat(tokenToValidate)) {
-        setIsValid(false)
-        onConfigChange?.(false)
-        return
-      }
-
       setApiToken(tokenToValidate)
       const valid = await checkServerStatus()
       setIsValid(valid)
@@ -113,12 +106,12 @@ const ApiConfig = ({ onConfigChange }) => {
           )}
           {!isChecking && isValid && (
             <div className="status-message valid">
-              ✅ API token format is valid and ready to use
+              ✅ API token is valid and ready to use
             </div>
           )}
           {!isChecking && token && !isValid && (
             <div className="status-message invalid">
-              ❌ Invalid API token format. Token should start with "r8_" followed by 40 characters.
+              ❌ Invalid API token or connection failed
             </div>
           )}
           {!token && (
@@ -141,7 +134,6 @@ const ApiConfig = ({ onConfigChange }) => {
               </ol>
               <p><strong>Cost:</strong> ~$0.15 per 3D model generation</p>
               <p><strong>Security:</strong> Your token is stored locally in your browser</p>
-              <p><strong>Note:</strong> Full token validation occurs during the first API call due to browser security restrictions</p>
             </div>
           </details>
         </div>

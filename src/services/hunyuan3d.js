@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Configuration for the Replicate API
 const API_CONFIG = {
-  baseURL: 'https://api.replicate.com/v1',
+  baseURL: '/api/replicate', // Use Vite proxy to avoid CORS issues
   timeout: 300000, // 5 minutes timeout for 3D generation
   apiToken: '', // Set your Replicate API token here
 }
@@ -130,23 +130,7 @@ export const generateModel = async (imageFile, description = '', options = {}) =
 }
 
 /**
- * Validate Replicate API token format
- * @param {string} token - The API token to validate
- * @returns {boolean} True if token format is valid
- */
-export const validateTokenFormat = (token) => {
-  if (!token || typeof token !== 'string') {
-    return false
-  }
-
-  // Replicate tokens start with 'r8_' and are followed by 40 characters
-  const tokenRegex = /^r8_[a-zA-Z0-9]{40}$/
-  return tokenRegex.test(token)
-}
-
-/**
  * Check if the Replicate API is available and token is valid
- * Note: Due to CORS restrictions, we can't validate tokens directly from browser
  * @returns {Promise<boolean>} True if API is available
  */
 export const checkServerStatus = async () => {
@@ -156,20 +140,38 @@ export const checkServerStatus = async () => {
       return false
     }
 
-    // First check token format
-    if (!validateTokenFormat(API_CONFIG.apiToken)) {
-      console.error('Invalid token format. Replicate tokens should start with "r8_" followed by 40 characters.')
-      return false
+    console.log('Validating token with Replicate API...')
+
+    // Use the proxy endpoint to avoid CORS issues
+    const response = await fetch('/api/replicate/account', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${API_CONFIG.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
+
+    if (!response.ok) {
+      if (response.status === 401) {
+        throw new Error('Invalid API token')
+      } else if (response.status === 403) {
+        throw new Error('API token does not have required permissions')
+      } else {
+        throw new Error(`API request failed with status ${response.status}`)
+      }
     }
 
-    console.log('Token format is valid. Note: Full validation will occur during first API call due to CORS restrictions.')
-
-    // For now, we'll assume the token is valid if the format is correct
-    // The actual validation will happen when we make the first API call
+    const data = await response.json()
+    console.log('Token validation successful:', data)
     return true
 
   } catch (error) {
     console.error('Token validation failed:', error)
+
+    if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      console.error('Network error - this might be a CORS issue or network connectivity problem')
+    }
+
     return false
   }
 }
