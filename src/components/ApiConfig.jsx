@@ -60,29 +60,30 @@ const ApiConfig = ({ onConfigChange }) => {
 
   return (
     <div className="api-config-container">
-      <div className="config-header">
-        <h3>🔑 API Configuration</h3>
-        <div className={`status-indicator ${isValid ? 'valid' : 'invalid'}`}>
-          {isChecking ? '⏳' : isValid ? '✅' : '❌'}
-        </div>
-      </div>
-
       <div className="config-content">
+        <div className="config-header">
+          <div className="header-left">
+            <h3>🔑 API Configuration</h3>
+            <div className={`status-badge ${isValid ? 'valid' : 'invalid'}`}>
+              {isChecking ? '⏳' : isValid ? '✅ Connected' : '❌ Not Connected'}
+            </div>
+          </div>
+        </div>
+
         <div className="token-input-section">
-          <label htmlFor="api-token">Replicate API Token:</label>
           <div className="token-input-wrapper">
             <input
               id="api-token"
               type={showToken ? 'text' : 'password'}
               value={token}
               onChange={handleTokenChange}
-              placeholder="r8_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+              placeholder="Enter your Replicate API token (r8_...)"
               className={`token-input ${isValid ? 'valid' : token ? 'invalid' : ''}`}
             />
             <button
               type="button"
               onClick={() => setShowToken(!showToken)}
-              className="toggle-visibility"
+              className="input-button"
               title={showToken ? 'Hide token' : 'Show token'}
             >
               {showToken ? '👁️' : '🙈'}
@@ -91,7 +92,7 @@ const ApiConfig = ({ onConfigChange }) => {
               <button
                 type="button"
                 onClick={clearToken}
-                className="clear-token"
+                className="input-button clear"
                 title="Clear token"
               >
                 ✕
@@ -100,45 +101,28 @@ const ApiConfig = ({ onConfigChange }) => {
           </div>
         </div>
 
-        <div className="config-status">
-          {isChecking && (
-            <div className="status-message checking">
-              🔄 Validating API token...
-            </div>
-          )}
-          {!isChecking && isValid && (
-            <div className="status-message valid">
-              ✅ API token is valid and ready to use
-            </div>
-          )}
-          {!isChecking && token && !isValid && (
-            <div className="status-message invalid">
-              ❌ Invalid API token or connection failed
-            </div>
-          )}
-          {!token && (
-            <div className="status-message empty">
-              ℹ️ Please enter your Replicate API token to continue
-            </div>
-          )}
-        </div>
+        {/* Compact status message */}
+        {!isValid && !isChecking && (
+          <div className="compact-status">
+            {!token ? (
+              <span className="status-text info">
+                ℹ️ <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener noreferrer">Get your API token</a> to continue
+              </span>
+            ) : (
+              <span className="status-text error">
+                ❌ Invalid token or connection failed
+              </span>
+            )}
+          </div>
+        )}
 
-        <div className="config-help">
-          <details>
-            <summary>How to get your Replicate API token</summary>
-            <div className="help-content">
-              <ol>
-                <li>Go to <a href="https://replicate.com" target="_blank" rel="noopener noreferrer">replicate.com</a></li>
-                <li>Sign up or log in to your account</li>
-                <li>Visit your <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener noreferrer">API tokens page</a></li>
-                <li>Create a new token or copy an existing one</li>
-                <li>Paste it in the field above</li>
-              </ol>
-              <p><strong>Cost:</strong> ~$0.15 per 3D model generation</p>
-              <p><strong>Security:</strong> Your token is stored locally in your browser</p>
-            </div>
-          </details>
-        </div>
+        {isChecking && (
+          <div className="compact-status">
+            <span className="status-text checking">
+              🔄 Validating token...
+            </span>
+          </div>
+        )}
       </div>
     </div>
   )

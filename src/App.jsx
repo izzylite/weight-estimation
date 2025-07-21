@@ -1,12 +1,11 @@
 import { useState, useCallback } from 'react'
-import ImageUpload from './components/ImageUpload'
-import DescriptionInput from './components/DescriptionInput'
-import ProgressIndicator from './components/ProgressIndicator'
-import ApiConfig from './components/ApiConfig'
-import GenerationSettings from './components/GenerationSettings'
-import ModeSelector from './components/ModeSelector'
-import ModelImport from './components/ModelImport'
-import WeightEstimationResult from './components/WeightEstimationResult'
+import ModeSelectionStep from './components/steps/ModeSelectionStep'
+import ModelUploadStep from './components/steps/ModelUploadStep'
+import ImageUploadStep from './components/steps/ImageUploadStep'
+import DescriptionStep from './components/steps/DescriptionStep'
+import ProcessingStep from './components/steps/ProcessingStep'
+import ResultsStep from './components/steps/ResultsStep'
+import ErrorHandlingStep from './components/steps/ErrorHandlingStep'
 import { generateModel, setApiToken } from './services/hunyuan3d'
 import { estimateWeight, setApiToken as setWeightApiToken } from './services/weightEstimation'
 import { analyzeModelVolume } from './utils/volumeCalculator'
@@ -23,7 +22,9 @@ function App() {
   const [progress, setProgress] = useState('')
   const [progressInfo, setProgressInfo] = useState('')
   const [isApiConfigured, setIsApiConfigured] = useState(false)
-  const [currentStep, setCurrentStep] = useState('upload') // 'upload', 'generating', 'complete'
+  // Wizard steps: 'mode' -> 'upload' -> 'image' -> 'description' -> 'processing' -> 'complete' -> 'error'
+  const [currentStep, setCurrentStep] = useState('mode')
+  const [errorDetails, setErrorDetails] = useState(null)
   const [processingMode, setProcessingMode] = useState('generate') // 'generate' or 'import'
   const [importedModel, setImportedModel] = useState(null)
   const [importedModelName, setImportedModelName] = useState('')
@@ -32,6 +33,75 @@ function App() {
     generateTexture: false,
     qualityMode: 'turbo' // Default to turbo for faster generation
   })
+
+  // Wizard step definitions
+  const wizardSteps = [
+    { id: 'mode', title: 'Choose Mode', description: 'Select how to obtain your 3D model' },
+    { id: 'upload', title: 'Upload Model', description: 'Upload your 3D model file' },
+    { id: 'image', title: 'Add Image', description: 'Upload an image for AI analysis (optional)' },
+    { id: 'description', title: 'Add Details', description: 'Describe your object for better analysis' },
+    { id: 'processing', title: 'Processing', description: 'Analyzing your object...' },
+    { id: 'complete', title: 'Results', description: 'Weight estimation complete!' }
+  ]
+
+
+
+  const getCurrentStepNumber = () => {
+    return wizardSteps.findIndex(step => step.id === currentStep) + 1
+  }
+
+  // Step validation
+  const canProceedToNextStep = () => {
+    switch (currentStep) {
+      case 'mode':
+        // For generate mode, API must be configured. For import mode, no API needed.
+        return processingMode === 'import' || (processingMode === 'generate' && isApiConfigured)
+      case 'upload':
+        return processingMode === 'generate' || (processingMode === 'import' && importedModel)
+      case 'image':
+        return true // Can proceed from image step regardless
+      case 'description':
+        return true // Can proceed from description step regardless
+      default:
+        return false
+    }
+  }
+
+  // Navigation functions
+  const goToNextStep = () => {
+    const currentIndex = wizardSteps.findIndex(step => step.id === currentStep)
+    if (currentIndex < wizardSteps.length - 1 && canProceedToNextStep()) {
+      const nextStep = wizardSteps[currentIndex + 1]
+
+      // Skip upload step if in generate mode
+      if (nextStep.id === 'upload' && processingMode === 'generate') {
+        setCurrentStep('image')
+      } else {
+        setCurrentStep(nextStep.id)
+      }
+    }
+  }
+
+  const goToPreviousStep = () => {
+    const currentIndex = wizardSteps.findIndex(step => step.id === currentStep)
+    if (currentIndex > 0) {
+      const prevStep = wizardSteps[currentIndex - 1]
+
+      // Skip upload step if in generate mode when going back
+      if (prevStep.id === 'upload' && processingMode === 'generate') {
+        setCurrentStep('mode')
+      } else {
+        setCurrentStep(prevStep.id)
+      }
+    }
+  }
+
+  // Check if we can generate (validation for final step)
+  const hasImageOrDescription = uploadedImage || (description && description.trim().length > 0)
+  const canGenerate = hasImageOrDescription && (
+    (processingMode === 'generate' && isApiConfigured) ||
+    (processingMode === 'import' && importedModel)
+  )
 
   const handleImageUpload = useCallback((file) => {
     setUploadedImage(file)
@@ -81,10 +151,17 @@ function App() {
     const sessionId = Math.random().toString(36).substring(2, 11)
     console.log(`🚀 [App-${sessionId}] Starting ${processingMode} process`)
 
+    // Check if user has either an image or description
+    if (!uploadedImage && (!description || description.trim().length === 0)) {
+      console.warn(`⚠️ [App-${sessionId}] No image or description provided`)
+      setError('Please upload an image or provide a description of your object')
+      return
+    }
+
     if (processingMode === 'generate') {
       if (!uploadedImage) {
-        console.warn(`⚠️ [App-${sessionId}] No image uploaded`)
-        setError('Please upload an image first')
+        console.warn(`⚠️ [App-${sessionId}] No image uploaded for generation`)
+        setError('Please upload an image for 3D model generation')
         return
       }
       if (!isApiConfigured) {
@@ -106,7 +183,7 @@ function App() {
     console.log(`📝 [App-${sessionId}] Description:`, description || '(none)')
 
     setIsGenerating(true)
-    setCurrentStep('generating')
+    setCurrentStep('processing')
     setError('')
     setWeightResult(null)
     setAnalysisResult(null)
@@ -218,10 +295,22 @@ function App() {
 
     } catch (err) {
       console.error(`❌ [App-${sessionId}] Generation failed:`, err.message)
+
+      // Set detailed error information for the error handling page
       setError(err.message || 'Failed to generate 3D model and estimate weight')
+      setErrorDetails({
+        timestamp: new Date().toISOString(),
+        sessionId: sessionId,
+        processingMode: processingMode,
+        errorType: err.name || 'Error',
+        stack: err.stack,
+        userAgent: navigator.userAgent,
+        url: window.location.href
+      })
+
       setProgress('')
       setProgressInfo('')
-      setCurrentStep('upload')
+      setCurrentStep('error') // Go to error handling step
     } finally {
       setIsGenerating(false)
       console.log(`🏁 [App-${sessionId}] Generation process completed`)
@@ -250,123 +339,209 @@ function App() {
     setAnalysisResult(null)
     setWeightResult(null)
     setError('')
+    setErrorDetails(null)
     setProgress('')
     setProgressInfo('')
-    setCurrentStep('upload')
+    setCurrentStep('mode')
   }
 
-  const canGenerate = !isGenerating &&
-    ((processingMode === 'generate' && uploadedImage && isApiConfigured) ||
-     (processingMode === 'import' && importedModel))
+  // Error handling functions
+  const handleRetryFromError = () => {
+    setError('')
+    setErrorDetails(null)
+    setCurrentStep('processing')
+    // Retry the generation process
+    handleGenerate()
+  }
+
+  const handleGoBackFromError = () => {
+    setError('')
+    setErrorDetails(null)
+    setCurrentStep('description')
+  }
+
+  const handleChangeSettingsFromError = () => {
+    setError('')
+    setErrorDetails(null)
+    setCurrentStep('mode')
+  }
+
+  const handleCheckConfigurationFromError = () => {
+    setError('')
+    setErrorDetails(null)
+    setCurrentStep('mode')
+    // Could also trigger API configuration modal/section
+  }
+
+
+
+  const handleCancelProcessing = () => {
+    // Stop the generation process
+    setIsGenerating(false)
+    setProgress('')
+    setProgressInfo('')
+    setError('')
+    setErrorDetails(null)
+    // Go back to the description step
+    setCurrentStep('description')
+  }
+
+
 
 
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>🎯 Weight Estimation Tool</h1>
-        <p>Upload an image to generate a 3D model and estimate its weight using AI</p>
-      </header>
-
-      <main className="app-main">
-        {/* Show input section only when not complete */}
-        {currentStep !== 'complete' && (
-          <div className="input-section">
-            <ApiConfig onConfigChange={handleApiConfigChange} />
-
-            <div className="image-upload-section">
-              <ImageUpload
-                onImageUpload={handleImageUpload}
-                disabled={isGenerating}
-              />
-              {processingMode === 'import' && (
-                <p style={{ fontSize: '0.9rem', color: '#64748b', marginTop: '0.5rem', textAlign: 'center' }}>
-                  💡 Image is optional in import mode - upload for better AI weight analysis, or skip for volume-based estimation
-                </p>
-              )}
-            </div>
-
-            <ModeSelector
-              mode={processingMode}
-              onModeChange={handleModeChange}
-              disabled={isGenerating}
-            />
-
-            {processingMode === 'generate' && (
-              <GenerationSettings
-                onSettingsChange={handleSettingsChange}
-                disabled={isGenerating}
-              />
-            )}
-
-            {processingMode === 'import' && (
-              <ModelImport
-                onModelImport={handleModelImport}
-                disabled={isGenerating}
-              />
-            )}
-
-            <DescriptionInput
-              onDescriptionChange={handleDescriptionChange}
-              disabled={isGenerating}
-              value={description}
-            />
-
-            <div className="generate-section">
-              <button
-                onClick={handleGenerate}
-                disabled={!canGenerate}
-                className={`generate-button ${canGenerate ? 'ready' : 'disabled'}`}
-              >
-                {isGenerating ? '⏳ Processing...' : '⚖️ Estimate Weight'}
-              </button>
-
-              {processingMode === 'generate' && !isApiConfigured && uploadedImage && (
-                <p className="config-reminder">
-                  ⚠️ Please configure your Replicate API token above to generate 3D models
-                </p>
-              )}
-
-              {processingMode === 'import' && !importedModel && (
-                <p className="config-reminder">
-                  📁 Please import a 3D model file above to proceed with weight estimation
-                </p>
-              )}
-
-              {(isGenerating || progress) && (
-                <ProgressIndicator
-                  status={progress}
-                  isActive={isGenerating}
-                  additionalInfo={progressInfo}
-                />
-              )}
-            </div>
-
-            {error && (
-              <div className="error-section">
-                <div className="error-message">
-                  ❌ {error}
-                </div>
-              </div>
-            )}
+      <div className="app-container">
+        <header className="app-header">
+          <div className="header-content">
+            <h1>⚖️ AI Weight Estimator</h1>
+            <p>Upload an image or 3D model to estimate weight using AI</p>
           </div>
-        )}
+        </header>
 
-        {/* Show weight estimation result when complete */}
-        {currentStep === 'complete' && weightResult && (
-          <WeightEstimationResult
-            weightResult={weightResult}
-            analysisResult={analysisResult}
-            originalImage={uploadedImage}
-            onDownload={handleDownload}
-            onStartOver={handleStartOver}
-          />
-        )}
-      </main>
+        <main className="app-main">
+          {/* Wizard Steps */}
+          {currentStep !== 'complete' && currentStep !== 'error' && (
+            <div className="wizard-container">
+              {/* Step Content */}
+              <div className="step-content">
+                {/* Step 1: Mode Selection */}
+                {currentStep === 'mode' && (
+                  <ModeSelectionStep
+                    processingMode={processingMode}
+                    onModeChange={handleModeChange}
+                    onSettingsChange={handleSettingsChange}
+                    onApiConfigChange={handleApiConfigChange}
+                    disabled={isGenerating}
+                  />
+                )}
 
-      <footer className="app-footer">
-        <p>Powered by Hunyuan3D-2 via Replicate API • Built with React & Three.js</p>
-      </footer>
+                {/* Step 2: Model Upload (Import mode only) */}
+                {currentStep === 'upload' && processingMode === 'import' && (
+                  <ModelUploadStep
+                    onModelImport={handleModelImport}
+                    disabled={isGenerating}
+                  />
+                )}
+
+                {/* Step 3: Image Upload */}
+                {currentStep === 'image' && (
+                  <ImageUploadStep
+                    onImageUpload={handleImageUpload}
+                    processingMode={processingMode}
+                    disabled={isGenerating}
+                    uploadedImage={uploadedImage}
+                    description={description}
+                  />
+                )}
+
+                {/* Step 4: Description */}
+                {currentStep === 'description' && (
+                  <DescriptionStep
+                    onDescriptionChange={handleDescriptionChange}
+                    value={description}
+                    disabled={isGenerating}
+                    uploadedImage={uploadedImage}
+                  />
+                )}
+
+                {/* Processing Step */}
+                {currentStep === 'processing' && (
+                  <ProcessingStep
+                    isGenerating={isGenerating}
+                    progress={progress}
+                    progressInfo={progressInfo}
+                    error={error}
+                    onCancel={handleCancelProcessing}
+                  />
+                )}
+              </div>
+
+              {/* Navigation Buttons */}
+              {currentStep !== 'processing' && (
+                <div className="wizard-navigation">
+                  <button
+                    onClick={goToPreviousStep}
+                    disabled={getCurrentStepNumber() === 1}
+                    className="nav-button secondary"
+                  >
+                    ← Previous
+                  </button>
+
+                  <div className="nav-spacer"></div>
+
+                  {currentStep === 'description' ? (
+                    <div className="estimate-button-container">
+                      <button
+                        onClick={() => {
+                          setCurrentStep('processing')
+                          handleGenerate()
+                        }}
+                        disabled={!canGenerate}
+                        className={`nav-button primary ${canGenerate ? 'ready' : 'disabled'}`}
+                        title={!canGenerate ? 'Please provide an image to proceed' : ''}
+                      >
+                        ⚖️ Estimate Weight
+                      </button>
+                      {!canGenerate && (
+                        <div className="button-help-text">
+                          Please provide an image to proceed
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="next-button-container">
+                      <button
+                        onClick={goToNextStep}
+                        disabled={!canProceedToNextStep()}
+                        className={`nav-button primary ${canProceedToNextStep() ? 'ready' : 'disabled'}`}
+                        title={
+                          currentStep === 'mode' && processingMode === 'generate' && !isApiConfigured
+                            ? 'Please configure your API token to proceed'
+                            : ''
+                        }
+                      >
+                        Next →
+                      </button>
+                      {currentStep === 'mode' && processingMode === 'generate' && !isApiConfigured && (
+                        <div className="button-help-text">
+                          Please configure your API token to proceed
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Show weight estimation result when complete */}
+          {currentStep === 'complete' && weightResult && (
+            <ResultsStep
+              weightResult={weightResult}
+              analysisResult={analysisResult}
+              originalImage={uploadedImage}
+              onDownload={handleDownload}
+              onStartOver={handleStartOver}
+            />
+          )}
+
+          {/* Show error handling page when error occurs */}
+          {currentStep === 'error' && error && (
+            <ErrorHandlingStep
+              error={error}
+              errorDetails={errorDetails}
+              onRetry={handleRetryFromError}
+              onStartOver={handleStartOver}
+              onGoBack={handleGoBackFromError}
+              onChangeSettings={handleChangeSettingsFromError}
+              onCheckConfiguration={handleCheckConfigurationFromError}
+              disabled={isGenerating}
+            />
+          )}
+        </main>
+      </div>
     </div>
   )
 }

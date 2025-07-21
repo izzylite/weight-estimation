@@ -1,59 +1,32 @@
 .mode-selector-container {
-  background: white;
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border: 1px solid #e2e8f0;
-  margin-bottom: 1.5rem;
+  /* Inherits styling from parent */
 }
 
-.selector-header {
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.selector-header h3 {
-  color: #1e293b;
-  font-size: 1.3rem;
-  margin-bottom: 0.5rem;
-  font-weight: 600;
-}
-
-.selector-header p {
-  color: #64748b;
-  font-size: 0.95rem;
-  margin: 0;
-}
-
-/* Mode Options */
 .mode-options {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
 }
 
 .mode-option {
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 1.5rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  background: #f8fafc;
   position: relative;
+  cursor: pointer;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--border-radius);
+  background: white;
+  transition: all 0.2s ease;
+  overflow: hidden;
 }
 
-.mode-option:hover:not(.disabled) {
-  border-color: #3b82f6;
-  background: #eff6ff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+.mode-option:hover {
+  border-color: var(--primary-color);
+  box-shadow: var(--shadow-sm);
 }
 
 .mode-option.selected {
-  border-color: #10b981;
-  background: #f0fdf4;
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  border-color: var(--primary-color);
+  background: #eff6ff;
+  box-shadow: var(--shadow-md);
 }
 
 .mode-option.disabled {
@@ -61,109 +34,79 @@
   cursor: not-allowed;
 }
 
-/* Mode Header */
-.mode-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 1rem;
+.mode-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.mode-title {
+.mode-content {
+  padding: 1rem;
+}
+
+.mode-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .mode-icon {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
 }
 
-.mode-name {
-  font-size: 1.1rem;
+.mode-title {
   font-weight: 600;
-  color: #1e293b;
-}
-
-.mode-radio {
-  position: relative;
-}
-
-.mode-radio input[type="radio"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: #10b981;
-}
-
-/* Mode Description */
-.mode-description {
-  color: #64748b;
   font-size: 0.9rem;
-  line-height: 1.5;
-  margin-bottom: 1rem;
+  color: var(--gray-800);
 }
 
-/* Mode Stats */
+.mode-description {
+  font-size: 0.8rem;
+  color: var(--gray-600);
+  margin-bottom: 0.5rem;
+  line-height: 1.3;
+}
+
 .mode-stats {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
-  padding: 0.75rem;
-  background: white;
-  border-radius: 8px;
-  border: 1px solid #e2e8f0;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--gray-500);
 }
 
-.stat-item {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  flex: 1;
-}
-
-.stat-label {
-  font-size: 0.8rem;
-  color: #64748b;
+.stat {
   font-weight: 500;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
 }
 
-.stat-value {
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #1e293b;
+.stat-separator {
+  color: var(--gray-400);
 }
 
-/* Pros and Cons */
-.mode-pros-cons {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
+/* Responsive design */
+@media (max-width: 640px) {
+  .mode-options {
+    grid-template-columns: 1fr;
+  }
 }
 
-.pros, .cons {
-  background: white;
-  padding: 0.75rem;
-  border-radius: 6px;
-  border: 1px solid #e2e8f0;
-}
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mode-option {
+    background: #1f2937;
+    border-color: #374151;
+  }
 
-.pros h5, .cons h5 {
-  margin: 0 0 0.5rem 0;
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: #374151;
-}
+  .mode-option:hover {
+    border-color: var(--primary-color);
+  }
 
-.pros ul, .cons ul {
-  margin: 0;
-  padding-left: 1rem;
-  list-style: none;
+  .mode-option.selected {
+    background: #1e3a8a;
+    border-color: var(--primary-color);
+  }
 }
-
-.pros li, .cons li {
   font-size: 0.8rem;
   color: #64748b;
   margin-bottom: 0.25rem;

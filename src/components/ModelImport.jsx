@@ -76,7 +76,7 @@ const ModelImport = ({ onModelImport, disabled = false }) => {
   return (
     <div className="model-import-container">
       <div className="import-header">
-        <h3>📁 Import 3D Model</h3>
+        <h4>📁 Import 3D Model</h4>
         <p>Upload an existing .glb or .gltf file to skip 3D generation</p>
       </div>
 
@@ -117,9 +117,6 @@ const ModelImport = ({ onModelImport, disabled = false }) => {
               <p className="file-size">
                 {(importedFile.size / 1024 / 1024).toFixed(2)} MB
               </p>
-              <p className="file-type">
-                {importedFile.name.toLowerCase().endsWith('.glb') ? 'GLB Model' : 'GLTF Model'}
-              </p>
             </div>
             <button
               onClick={(e) => {
@@ -135,28 +132,13 @@ const ModelImport = ({ onModelImport, disabled = false }) => {
         )}
       </div>
 
-      {importedFile && (
-        <div className="import-success">
-          <div className="success-message">
-            ✅ 3D model imported successfully! Ready for volume calculation and weight estimation.
-          </div>
+      {!importedFile && (
+        <div className="import-tips">
+          <details>
+            <summary>💡 Tips for importing 3D models</summary>
+          </details>
         </div>
       )}
-
-      <div className="import-help">
-        <details>
-          <summary>💡 Tips for importing 3D models</summary>
-          <div className="help-content">
-            <ul>
-              <li><strong>File formats:</strong> .glb (recommended) or .gltf files</li>
-              <li><strong>File size:</strong> Keep under 50MB for best performance</li>
-              <li><strong>Quality:</strong> Higher polygon count = more accurate volume calculation</li>
-              <li><strong>Source:</strong> You can use models from previous generations or other 3D tools</li>
-              <li><strong>Testing:</strong> Perfect for testing weight estimation without waiting for generation</li>
-            </ul>
-          </div>
-        </details>
-      </div>
     </div>
   )
 }

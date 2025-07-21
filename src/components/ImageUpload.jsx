@@ -51,11 +51,9 @@ const ImageUpload = ({ onImageUpload, disabled = false }) => {
 
   return (
     <div className="image-upload-container">
-      <h3>Upload Image</h3>
-      
       {!preview ? (
-        <div 
-          {...getRootProps()} 
+        <div
+          {...getRootProps()}
           className={`dropzone ${isDragActive ? 'active' : ''} ${disabled ? 'disabled' : ''}`}
         >
           <input {...getInputProps()} />
@@ -74,8 +72,8 @@ const ImageUpload = ({ onImageUpload, disabled = false }) => {
       ) : (
         <div className="preview-container">
           <img src={preview} alt="Preview" className="preview-image" />
-          <button 
-            onClick={clearImage} 
+          <button
+            onClick={clearImage}
             className="clear-button"
             disabled={disabled}
           >

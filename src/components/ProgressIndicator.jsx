@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import './ProgressIndicator.css'
 
 /**
- * Enhanced progress indicator with detailed status and infinite animation
+ * Enhanced progress indicator with detailed status and progress tracking
  * @param {Object} props Component props
  * @param {string} props.status Current status message
  * @param {boolean} props.isActive Whether the progress is active
@@ -65,6 +65,13 @@ const ProgressIndicator = ({ status, isActive, additionalInfo }) => {
     return `${mins}:${secs < 10 ? '0' : ''}${secs}`
   }
 
+  // Extract percentage from status message
+  const getProgressPercentage = () => {
+    if (!status) return null
+    const match = status.match(/\((\d+)%\)/)
+    return match ? parseInt(match[1]) : null
+  }
+
   // Get detailed status message based on progress phase
   const getDetailedStatus = () => {
     if (!isActive) return ''
@@ -122,19 +129,40 @@ const ProgressIndicator = ({ status, isActive, additionalInfo }) => {
         {isActive && (
           <>
             <div className="progress-track">
-              <div className="progress-bar"></div>
+              <div
+                className={`progress-bar ${getProgressPercentage() ? 'percentage-mode' : 'indefinite-mode'}`}
+                style={getProgressPercentage() ? {
+                  width: `${getProgressPercentage()}%`
+                } : {}}
+              ></div>
             </div>
             
             <div className="progress-details">
-              <p className="detailed-status">{getDetailedStatus()}</p>
-              <p className="estimated-time">{getEstimatedTime()}</p>
-              {additionalInfo && (
-                <p className="additional-info">{additionalInfo}</p>
+              {additionalInfo ? (
+                <p className="detailed-status">{additionalInfo}</p>
+              ) : (
+                <p className="detailed-status">{getDetailedStatus()}</p>
+              )}
+              {getProgressPercentage() && (
+                <p className="progress-percentage">{getProgressPercentage()}% complete</p>
+              )}
+              {!getProgressPercentage() && (
+                <p className="estimated-time">{getEstimatedTime()}</p>
               )}
             </div>
             
             <div className="progress-tips">
-              <p>💡 Tip: 3D generation is computationally intensive and may take several minutes.</p>
+              {status.includes('Generating 3D Structure') ? (
+                <p>🧠 AI is analyzing your image and creating a 3D structure using diffusion sampling</p>
+              ) : status.includes('Creating 3D Mesh') ? (
+                <p>🔧 Converting the 3D structure into a detailed mesh using marching cubes algorithm</p>
+              ) : status.includes('Analyzing volume') ? (
+                <p>📐 Calculating precise volume measurements from the 3D geometry</p>
+              ) : status.includes('Estimating weight') ? (
+                <p>⚖️ AI is analyzing material properties and calculating weight estimates</p>
+              ) : (
+                <p>💡 3D generation is computationally intensive and may take several minutes</p>
+              )}
             </div>
           </>
         )}

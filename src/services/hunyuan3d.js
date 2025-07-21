@@ -18,6 +18,40 @@ const apiClient = axios.create({
 })
 
 /**
+ * Parse progress information from Replicate logs
+ * @param {string} logs - The log string from Replicate
+ * @param {number} elapsedTime - Elapsed time in seconds
+ * @returns {Object|null} Progress information or null if no progress found
+ */
+const parseProgressFromLogs = (logs, elapsedTime) => {
+  // Parse Diffusion Sampling progress
+  const diffusionMatch = logs.match(/Diffusion Sampling::\s*(\d+)%\|[^|]*\|\s*(\d+)\/(\d+)/)
+  if (diffusionMatch) {
+    const [, percentage, current, total] = diffusionMatch
+    const progressInfo = {
+      status: `Generating 3D Structure (${percentage}%)`,
+      details: `Diffusion sampling: ${current}/${total} steps • ${Math.round(elapsedTime / 60)}min elapsed`
+    }
+    console.log(`🎯 Parsed diffusion progress: ${percentage}% (${current}/${total})`)
+    return progressInfo
+  }
+
+  // Parse MC Level (Marching Cubes) progress
+  const mcMatch = logs.match(/MC Level [^:]*::\s*(\d+)%\|[^|]*\|\s*(\d+)\/(\d+)/)
+  if (mcMatch) {
+    const [, percentage, current, total] = mcMatch
+    const progressInfo = {
+      status: `Creating 3D Mesh (${percentage}%)`,
+      details: `Mesh generation: ${current}/${total} vertices • ${Math.round(elapsedTime / 60)}min elapsed`
+    }
+    console.log(`🎯 Parsed mesh progress: ${percentage}% (${current}/${total})`)
+    return progressInfo
+  }
+
+  return null
+}
+
+/**
  * Convert file to data URL for Replicate API
  * @param {File} file - The image file to convert
  * @returns {Promise<string>} Data URL string
@@ -150,27 +184,39 @@ export const generateModel = async (imageFile, description = '', options = {}) =
         throw new Error(`3D generation timed out after ${Math.round(elapsedTime / 60)} minutes. This may be due to high server load. Please try again.`)
       }
 
-      // Update progress based on elapsed time and quality mode
-      if (elapsedTime < timeThresholds.phase1) {
-        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Analyzing image features and object boundaries...')
-      } else if (elapsedTime < timeThresholds.phase2) {
-        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Creating 3D geometry from detected features...')
-      } else if (elapsedTime < timeThresholds.phase3) {
-        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Refining mesh topology and surface details...')
-      } else {
-        onProgress(`Generating 3D model with ${modelInfo.name}`, `Taking longer than expected (${Math.round(elapsedTime / 60)}min)... Please wait...`)
-      }
-
       await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
 
       const statusResponse = await apiClient.get(`/predictions/${prediction.id}`)
       result = statusResponse.data
 
-      // Log progress if available
+      // Check for detailed progress in logs first (priority)
+      let hasDetailedProgress = false
       if (result.logs) {
         const newLogs = result.logs.split('\n').slice(-3).join('\n').trim()
         if (newLogs) {
           console.log(`📋 [${sessionId}] Latest logs: ${newLogs}`)
+
+          // Parse progress from logs and update UI
+          const progressInfo = parseProgressFromLogs(newLogs, elapsedTime)
+          if (progressInfo) {
+            console.log(`📊 Using detailed progress: ${progressInfo.status}`)
+            onProgress(progressInfo.status, progressInfo.details)
+            hasDetailedProgress = true
+          }
+        }
+      }
+
+      // Fall back to time-based progress only if no detailed progress available
+      if (!hasDetailedProgress) {
+        console.log(`⏰ Using fallback time-based progress (${elapsedTime}s elapsed)`)
+        if (elapsedTime < timeThresholds.phase1) {
+          onProgress(`Generating 3D model with ${modelInfo.name}`, 'Analyzing image features and object boundaries...')
+        } else if (elapsedTime < timeThresholds.phase2) {
+          onProgress(`Generating 3D model with ${modelInfo.name}`, 'Creating 3D geometry from detected features...')
+        } else if (elapsedTime < timeThresholds.phase3) {
+          onProgress(`Generating 3D model with ${modelInfo.name}`, 'Refining mesh topology and surface details...')
+        } else {
+          onProgress(`Generating 3D model with ${modelInfo.name}`, `Taking longer than expected (${Math.round(elapsedTime / 60)}min)... Please wait...`)
         }
       }
     }

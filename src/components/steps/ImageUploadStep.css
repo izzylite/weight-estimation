@@ -1,0 +1,31 @@
+.image-upload-step {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.config-section {
+  margin-bottom: 2rem;
+}
+
+.step-hint {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--info-bg);
+  color: var(--info-text);
+  border-radius: 8px;
+  border: 1px solid var(--info-border);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.requirement-notice {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+  border-radius: 8px;
+  border: 1px solid var(--warning-border);
+  font-size: 0.9rem;
+  text-align: center;
+  font-weight: 500;
+}

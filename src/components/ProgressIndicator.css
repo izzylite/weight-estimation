@@ -55,12 +55,26 @@
 .progress-bar {
   position: absolute;
   height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Indefinite mode - sliding animation */
+.progress-bar.indefinite-mode {
   width: 30%;
   background: linear-gradient(90deg, #1976d2, #64b5f6, #42a5f5, #1976d2);
   background-size: 300% 100%;
-  border-radius: 4px;
   animation: progressAnimation 2.5s ease-in-out infinite;
   box-shadow: 0 0 10px rgba(25, 118, 210, 0.3);
+}
+
+/* Percentage mode - solid progress bar */
+.progress-bar.percentage-mode {
+  background: linear-gradient(90deg, #2e7d32, #4caf50);
+  background-size: 100% 100%;
+  left: 0 !important;
+  animation: none;
+  box-shadow: 0 0 8px rgba(46, 125, 50, 0.3);
 }
 
 @keyframes progressAnimation {
@@ -101,6 +115,13 @@
   color: #455a64;
   font-size: 0.85rem;
   font-style: italic;
+}
+
+.progress-percentage {
+  margin: 0;
+  color: #2e7d32;
+  font-size: 0.9rem;
+  font-weight: 600;
 }
 
 .progress-tips {
