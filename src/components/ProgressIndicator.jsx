@@ -98,11 +98,11 @@ const ProgressIndicator = ({ status, isActive, additionalInfo }) => {
 
     switch (progressPhase) {
       case 0:
-        return 'Estimated time: 3-5 minutes'
+        return 'Estimated time: 1-3 minutes'
       case 1:
-        return 'Estimated time: 2-4 minutes remaining'
+        return 'Estimated time: 1-2 minutes remaining'
       case 2:
-        return 'Estimated time: 1-3 minutes remaining'
+        return 'Estimated time: 1-2 minutes remaining'
       case 3:
         return 'Almost done, just a moment longer...'
       case 4:
@@ -128,15 +128,6 @@ const ProgressIndicator = ({ status, isActive, additionalInfo }) => {
 
         {isActive && (
           <>
-            <div className="progress-track">
-              <div
-                className={`progress-bar ${getProgressPercentage() ? 'percentage-mode' : 'indefinite-mode'}`}
-                style={getProgressPercentage() ? {
-                  width: `${getProgressPercentage()}%`
-                } : {}}
-              ></div>
-            </div>
-            
             <div className="progress-details">
               {additionalInfo ? (
                 <p className="detailed-status">{additionalInfo}</p>
@@ -152,7 +143,11 @@ const ProgressIndicator = ({ status, isActive, additionalInfo }) => {
             </div>
             
             <div className="progress-tips">
-              {status.includes('Generating 3D Structure') ? (
+              {status.includes('Checking cache') ? (
+                <p>🔍 Looking for previously generated models to speed up the process</p>
+              ) : status.includes('Using cached model') ? (
+                <p>⚡ Found cached model! Loading instantly without regeneration</p>
+              ) : status.includes('Generating 3D Structure') ? (
                 <p>🧠 AI is analyzing your image and creating a 3D structure using diffusion sampling</p>
               ) : status.includes('Creating 3D Mesh') ? (
                 <p>🔧 Converting the 3D structure into a detailed mesh using marching cubes algorithm</p>

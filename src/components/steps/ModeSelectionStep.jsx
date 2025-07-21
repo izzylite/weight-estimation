@@ -2,6 +2,7 @@ import React from 'react'
 import ModeSelector from '../ModeSelector'
 import GenerationSettings from '../GenerationSettings'
 import ApiConfig from '../ApiConfig'
+import CacheManager from '../CacheManager'
 import './ModeSelectionStep.css'
 
 const ModeSelectionStep = ({ 
@@ -33,6 +34,11 @@ const ModeSelectionStep = ({
             disabled={disabled}
           />
         </div>
+      )}
+
+      {/* Cache Manager (only for generate mode) */}
+      {processingMode === 'generate' && (
+        <CacheManager />
       )}
     </div>
   )

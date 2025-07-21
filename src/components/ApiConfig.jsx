@@ -12,11 +12,26 @@ const ApiConfig = ({ onConfigChange }) => {
   // Load token from localStorage on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('replicate_api_token')
+    const savedValidation = localStorage.getItem('replicate_api_token_valid')
+
     if (savedToken) {
       setToken(savedToken)
       setApiToken(savedToken) // For 3D generation
       setWeightApiToken(savedToken) // For weight estimation
-      validateToken(savedToken)
+
+      // Check if we have a cached validation result
+      if (savedValidation === 'true') {
+        // Use cached validation result
+        setIsValid(true)
+        onConfigChange?.(true)
+      } else if (savedValidation === 'false') {
+        // Use cached validation result
+        setIsValid(false)
+        onConfigChange?.(false)
+      } else {
+        // No cached result, validate the token
+        validateToken(savedToken)
+      }
     }
   }, [])
 
@@ -28,9 +43,15 @@ const ApiConfig = ({ onConfigChange }) => {
       const valid = await checkServerStatus()
       setIsValid(valid)
       onConfigChange?.(valid)
+
+      // Cache the validation result
+      localStorage.setItem('replicate_api_token_valid', valid.toString())
     } catch (error) {
       setIsValid(false)
       onConfigChange?.(false)
+
+      // Cache the validation result
+      localStorage.setItem('replicate_api_token_valid', 'false')
     } finally {
       setIsChecking(false)
     }
@@ -39,13 +60,15 @@ const ApiConfig = ({ onConfigChange }) => {
   const handleTokenChange = (e) => {
     const newToken = e.target.value.trim()
     setToken(newToken)
-    
+
     if (newToken) {
-      // Save to localStorage
+      // Save to localStorage and clear cached validation
       localStorage.setItem('replicate_api_token', newToken)
+      localStorage.removeItem('replicate_api_token_valid') // Clear cached validation
       validateToken(newToken)
     } else {
       localStorage.removeItem('replicate_api_token')
+      localStorage.removeItem('replicate_api_token_valid') // Clear cached validation
       setIsValid(false)
       onConfigChange?.(false)
     }
@@ -54,6 +77,7 @@ const ApiConfig = ({ onConfigChange }) => {
   const clearToken = () => {
     setToken('')
     localStorage.removeItem('replicate_api_token')
+    localStorage.removeItem('replicate_api_token_valid') // Clear cached validation
     setIsValid(false)
     onConfigChange?.(false)
   }
