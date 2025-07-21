@@ -142,27 +142,50 @@ export const getModelDimensions = (model) => {
  * @returns {Promise<Object>} Volume analysis results
  */
 export const analyzeModelVolume = async (glbBlob) => {
+  const sessionId = Math.random().toString(36).substring(2, 11)
+  console.log(`📊 [Vol-${sessionId}] Starting volume analysis`)
+  console.log(`📦 [Vol-${sessionId}] GLB blob size: ${(glbBlob.size / 1024 / 1024).toFixed(2)} MB`)
+
   try {
+    console.log(`🔄 [Vol-${sessionId}] Loading GLB model...`)
     const model = await loadGLBModel(glbBlob)
+    console.log(`✅ [Vol-${sessionId}] GLB model loaded successfully`)
+
+    console.log(`📐 [Vol-${sessionId}] Calculating volume...`)
     const volume = calculateModelVolume(model)
+    console.log(`✅ [Vol-${sessionId}] Volume calculated: ${volume.toFixed(6)} cubic units`)
+
+    console.log(`📏 [Vol-${sessionId}] Calculating dimensions...`)
     const dimensions = getModelDimensions(model)
-    
+    console.log(`✅ [Vol-${sessionId}] Dimensions calculated:`, {
+      width: dimensions.width.toFixed(3),
+      height: dimensions.height.toFixed(3),
+      depth: dimensions.depth.toFixed(3)
+    })
+
     // Count meshes and vertices
+    console.log(`🔢 [Vol-${sessionId}] Counting meshes and geometry...`)
     let meshCount = 0
     let totalVertices = 0
     let totalFaces = 0
-    
+
     model.traverse((child) => {
       if (child.isMesh && child.geometry) {
         meshCount++
         totalVertices += child.geometry.attributes.position.count
-        
+
         if (child.geometry.index) {
           totalFaces += child.geometry.index.count / 3
         } else {
           totalFaces += child.geometry.attributes.position.count / 3
         }
       }
+    })
+
+    console.log(`📈 [Vol-${sessionId}] Geometry stats:`, {
+      meshCount,
+      totalVertices,
+      totalFaces: Math.floor(totalFaces)
     })
     
     const result = {
@@ -174,9 +197,23 @@ export const analyzeModelVolume = async (glbBlob) => {
       model: model // Include the loaded model for display
     }
 
+    console.log(`🎉 [Vol-${sessionId}] Volume analysis completed successfully!`)
+    console.log(`📋 [Vol-${sessionId}] Final results:`, {
+      volume: result.volume.toFixed(6),
+      meshCount: result.meshCount,
+      totalVertices: result.totalVertices,
+      totalFaces: result.totalFaces,
+      boundingBox: {
+        width: result.dimensions.width.toFixed(3),
+        height: result.dimensions.height.toFixed(3),
+        depth: result.dimensions.depth.toFixed(3)
+      }
+    })
+
     return result
-    
+
   } catch (error) {
+    console.error(`❌ [Vol-${sessionId}] Volume analysis failed:`, error.message)
     throw new Error(`Volume analysis failed: ${error.message}`)
   }
 }

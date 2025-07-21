@@ -37,7 +37,7 @@ const LoadingSpinner = () => (
 const ModelViewer = ({ analysisResult, onDownload }) => {
   const [autoRotate, setAutoRotate] = useState(true)
   const [showWireframe, setShowWireframe] = useState(false)
-  
+
   if (!analysisResult) {
     return (
       <div className="model-viewer-container">
@@ -61,19 +61,19 @@ const ModelViewer = ({ analysisResult, onDownload }) => {
       <div className="viewer-header">
         <h3>3D Model & Volume Analysis</h3>
         <div className="viewer-controls">
-          <button 
+          <button
             onClick={() => setAutoRotate(!autoRotate)}
             className={`control-button ${autoRotate ? 'active' : ''}`}
           >
             {autoRotate ? '⏸️' : '▶️'} Auto Rotate
           </button>
-          <button 
+          <button
             onClick={() => setShowWireframe(!showWireframe)}
             className={`control-button ${showWireframe ? 'active' : ''}`}
           >
             🔲 Wireframe
           </button>
-          <button 
+          <button
             onClick={downloadModel}
             className="download-button"
           >
@@ -92,19 +92,19 @@ const ModelViewer = ({ analysisResult, onDownload }) => {
               <ambientLight intensity={0.4} />
               <directionalLight position={[10, 10, 5]} intensity={1} />
               <pointLight position={[-10, -10, -5]} intensity={0.5} />
-              
+
               <Model model={model} autoRotate={autoRotate} />
-              
+
               <Environment preset="studio" />
-              <ContactShadows 
-                position={[0, -1, 0]} 
-                opacity={0.4} 
-                scale={10} 
-                blur={2} 
-                far={4} 
+              <ContactShadows
+                position={[0, -1, 0]}
+                opacity={0.4}
+                scale={10}
+                blur={2}
+                far={4}
               />
-              
-              <OrbitControls 
+
+              <OrbitControls
                 enablePan={true}
                 enableZoom={true}
                 enableRotate={true}
@@ -113,7 +113,7 @@ const ModelViewer = ({ analysisResult, onDownload }) => {
               />
             </Suspense>
           </Canvas>
-          
+
           <div className="canvas-overlay">
             <div className="model-info">
               <p>🔄 Drag to rotate • 🔍 Scroll to zoom • 🖱️ Right-click to pan</p>

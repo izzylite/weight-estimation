@@ -4,6 +4,7 @@ import DescriptionInput from './components/DescriptionInput'
 import ModelViewer from './components/ModelViewer'
 import LoadingSpinner from './components/LoadingSpinner'
 import ApiConfig from './components/ApiConfig'
+import GenerationSettings from './components/GenerationSettings'
 import { generateModel } from './services/hunyuan3d'
 import { analyzeModelVolume } from './utils/volumeCalculator'
 import './App.css'
@@ -17,6 +18,10 @@ function App() {
   const [error, setError] = useState('')
   const [progress, setProgress] = useState('')
   const [isApiConfigured, setIsApiConfigured] = useState(false)
+  const [generationSettings, setGenerationSettings] = useState({
+    removeBackground: true,
+    generateTexture: false
+  })
 
   const handleImageUpload = useCallback((file) => {
     setUploadedImage(file)
@@ -34,39 +39,63 @@ function App() {
     setIsApiConfigured(isValid)
   }, [])
 
+  const handleSettingsChange = useCallback((settings) => {
+    setGenerationSettings(settings)
+  }, [])
+
+
+
 
 
   const handleGenerate = async () => {
+    const sessionId = Math.random().toString(36).substring(2, 11)
+    console.log(`🚀 [App-${sessionId}] Starting generation process`)
+
     if (!uploadedImage) {
+      console.warn(`⚠️ [App-${sessionId}] No image uploaded`)
       setError('Please upload an image first')
       return
     }
 
     if (!isApiConfigured) {
+      console.warn(`⚠️ [App-${sessionId}] API not configured`)
       setError('Please configure your Replicate API token first')
       return
     }
+
+    console.log(`⚙️ [App-${sessionId}] Generation settings:`, generationSettings)
+    console.log(`📝 [App-${sessionId}] Description:`, description || '(none)')
 
     setIsGenerating(true)
     setError('')
     setProgress('Generating 3D model with Replicate...')
 
     try {
-      // Generate 3D model
-      const blob = await generateModel(uploadedImage, description)
+      console.log(`🔄 [App-${sessionId}] Starting 3D model generation...`)
+      // Generate 3D model with current settings
+      const blob = await generateModel(uploadedImage, description, generationSettings)
+      console.log(`✅ [App-${sessionId}] 3D model generated successfully`)
       setGeneratedBlob(blob)
       setProgress('Analyzing volume...')
 
+      console.log(`📊 [App-${sessionId}] Starting volume analysis...`)
       // Analyze volume
       const analysis = await analyzeModelVolume(blob)
+      console.log(`✅ [App-${sessionId}] Volume analysis completed:`, {
+        volume: analysis.volume,
+        meshCount: analysis.meshCount,
+        vertices: analysis.totalVertices
+      })
       setAnalysisResult(analysis)
       setProgress('')
 
     } catch (err) {
+      console.error(`❌ [App-${sessionId}] Generation failed:`, err.message)
       setError(err.message || 'Failed to generate 3D model')
       setProgress('')
     } finally {
       setIsGenerating(false)
+      console.log(`🏁 [App-${sessionId}] Generation process completed`)
     }
   }
 
@@ -98,6 +127,11 @@ function App() {
 
           <ImageUpload
             onImageUpload={handleImageUpload}
+            disabled={isGenerating}
+          />
+
+          <GenerationSettings
+            onSettingsChange={handleSettingsChange}
             disabled={isGenerating}
           />
 
