@@ -107,13 +107,7 @@
     border-color: var(--primary-color);
   }
 }
-  font-size: 0.8rem;
-  color: #64748b;
-  margin-bottom: 0.25rem;
-  position: relative;
-  line-height: 1.4;
-}
-
+ 
 .pros li:before {
   content: "•";
   color: #10b981;

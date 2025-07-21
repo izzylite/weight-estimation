@@ -20,15 +20,15 @@ const ImageUploadStep = ({
       {/* Hint */}
       <div className="step-hint">
         💡 {processingMode === 'import'
-          ? 'Image is optional but helps improve AI weight analysis accuracy'
+          ? 'Upload a clear image of your object for AI weight analysis'
           : 'Upload a clear image of your object for 3D model generation'
         }
       </div>
 
-      {/* Requirement notice */}
-      {!uploadedImage && (!description || description.trim().length === 0) && (
+      {/* Requirement notice - for both modes */}
+      {(!uploadedImage || !description || description.trim().length === 0) && (
         <div className="requirement-notice">
-          ⚠️ Either an image or description is required to proceed
+          ⚠️ Image is required to proceed
         </div>
       )}
     </div>

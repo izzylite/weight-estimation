@@ -26,7 +26,7 @@ const DescriptionInput = ({ onDescriptionChange, disabled = false, value = '' })
     <div className="description-input-container">
       <div className="description-header">
         <label htmlFor="description-input" className="description-label">
-          📝 Description (Optional)
+          📝 Description
         </label>
         <span className="char-counter">
           {charCount}/{maxLength}

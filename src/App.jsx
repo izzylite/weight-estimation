@@ -59,11 +59,39 @@ function App() {
       case 'upload':
         return processingMode === 'generate' || (processingMode === 'import' && importedModel)
       case 'image':
-        return true // Can proceed from image step regardless
+        // Image is required for both generate and import modes
+        return uploadedImage
       case 'description':
-        return true // Can proceed from description step regardless
+        // Description is required for both generate and import modes
+        return description && description.trim().length > 0
       default:
         return false
+    }
+  }
+
+  // Get tooltip message for disabled next button
+  const getNextButtonTooltip = () => {
+    if (canProceedToNextStep()) return ''
+
+    switch (currentStep) {
+      case 'mode':
+        return processingMode === 'generate' && !isApiConfigured
+          ? 'Please configure your API token to proceed'
+          : ''
+      case 'upload':
+        return processingMode === 'import' && !importedModel
+          ? 'Please import a 3D model to proceed'
+          : ''
+      case 'image':
+        return !uploadedImage
+          ? 'Please upload an image to proceed'
+          : ''
+      case 'description':
+        return (!description || description.trim().length === 0)
+          ? 'Please provide a description to proceed'
+          : ''
+      default:
+        return ''
     }
   }
 
@@ -97,10 +125,10 @@ function App() {
   }
 
   // Check if we can generate (validation for final step)
-  const hasImageOrDescription = uploadedImage || (description && description.trim().length > 0)
-  const canGenerate = hasImageOrDescription && (
-    (processingMode === 'generate' && isApiConfigured) ||
-    (processingMode === 'import' && importedModel)
+  const hasImageAndDescription = uploadedImage && (description && description.trim().length > 0)
+  const canGenerate = (
+    (processingMode === 'generate' && hasImageAndDescription && isApiConfigured) ||
+    (processingMode === 'import' && hasImageAndDescription && importedModel) // Import mode requires image, description AND model
   )
 
   const handleImageUpload = useCallback((file) => {
@@ -151,10 +179,10 @@ function App() {
     const sessionId = Math.random().toString(36).substring(2, 11)
     console.log(`🚀 [App-${sessionId}] Starting ${processingMode} process`)
 
-    // Check if user has either an image or description
-    if (!uploadedImage && (!description || description.trim().length === 0)) {
-      console.warn(`⚠️ [App-${sessionId}] No image or description provided`)
-      setError('Please upload an image or provide a description of your object')
+    // Check if user has both image and description (required for generate mode)
+    if (processingMode === 'generate' && (!uploadedImage || !description || description.trim().length === 0)) {
+      console.warn(`⚠️ [App-${sessionId}] Missing image or description for generation`)
+      setError('Please upload an image AND provide a description of your object for 3D model generation')
       return
     }
 
@@ -280,7 +308,29 @@ function App() {
           onProgress: handleProgress
         })
       } else {
-        throw new Error('No image available for weight estimation')
+        // Fallback for import mode without image - use basic volume-based estimation
+        console.log(`📊 [App-${sessionId}] Using basic volume-based estimation (no image provided)`)
+        weightEstimation = {
+          estimatedWeight: analysis.volume * 1000, // Assume 1g/cm³ density as default
+          unit: 'grams',
+          confidence: 0.4, // Lower confidence without image analysis
+          materialType: 'unknown material',
+          density: 1.0,
+          reasoning: 'Basic volume-based calculation. Estimated density of 1g/cm³ used due to lack of visual material analysis.',
+          weightRange: {
+            min: analysis.volume * 500,  // 0.5g/cm³ (light materials like plastic)
+            max: analysis.volume * 2000  // 2g/cm³ (dense materials like metal)
+          },
+          structure: 'unknown',
+          certaintyFactors: {
+            materialIdentification: 0.1,
+            structureAssessment: 0.2,
+            densityEstimation: 0.3
+          },
+          volume: analysis.volume,
+          processingTime: '0.1',
+          sessionId: sessionId
+        }
       }
 
       console.log(`✅ [App-${sessionId}] Weight estimation completed:`, {
@@ -480,13 +530,20 @@ function App() {
                         }}
                         disabled={!canGenerate}
                         className={`nav-button primary ${canGenerate ? 'ready' : 'disabled'}`}
-                        title={!canGenerate ? 'Please provide an image to proceed' : ''}
+                        title={!canGenerate ? (
+                          processingMode === 'generate'
+                            ? (!uploadedImage ? 'Please provide both image and description to proceed' : 'Please provide description to proceed')
+                            : (!hasImageAndDescription ? 'Please provide both image and description to proceed' : 'Please import a 3D model to proceed')
+                        ) : ''}
                       >
                         ⚖️ Estimate Weight
                       </button>
                       {!canGenerate && (
                         <div className="button-help-text">
-                          Please provide an image to proceed
+                          {processingMode === 'generate'
+                            ? (!uploadedImage ? 'Please provide both image and description to proceed' : 'Please provide description to proceed')
+                            : (!hasImageAndDescription ? 'Please provide both image and description to proceed' : 'Please import a 3D model to proceed')
+                          }
                         </div>
                       )}
                     </div>
@@ -496,17 +553,13 @@ function App() {
                         onClick={goToNextStep}
                         disabled={!canProceedToNextStep()}
                         className={`nav-button primary ${canProceedToNextStep() ? 'ready' : 'disabled'}`}
-                        title={
-                          currentStep === 'mode' && processingMode === 'generate' && !isApiConfigured
-                            ? 'Please configure your API token to proceed'
-                            : ''
-                        }
+                        title={getNextButtonTooltip()}
                       >
                         Next →
                       </button>
-                      {currentStep === 'mode' && processingMode === 'generate' && !isApiConfigured && (
+                      {!canProceedToNextStep() && getNextButtonTooltip() && (
                         <div className="button-help-text">
-                          Please configure your API token to proceed
+                          {getNextButtonTooltip()}
                         </div>
                       )}
                     </div>

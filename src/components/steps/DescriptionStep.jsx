@@ -20,10 +20,10 @@ const DescriptionStep = ({
         💡 Describe your object to help the AI provide more accurate weight estimates
       </div>
 
-      {/* Requirement notice */}
-      {!uploadedImage && (!value || value.trim().length === 0) && (
+      {/* Requirement notice - for both modes */}
+      {(!uploadedImage || !value || value.trim().length === 0) && (
         <div className="requirement-notice">
-          ⚠️ Either an image or description is required to proceed
+          ⚠️ Description is required to proceed
         </div>
       )}
     </div>
