@@ -136,10 +136,19 @@ export const generateModel = async (imageFile, description = '', options = {}) =
       ? { phase1: 15, phase2: 45, phase3: 75 }  // Faster thresholds for turbo mode
       : { phase1: 30, phase2: 90, phase3: 180 } // Original thresholds for quality mode
 
+    // Set maximum timeout based on quality mode (with generous buffer)
+    const maxTimeout = qualityMode === 'turbo' ? 300 : 600 // 5 minutes for turbo, 10 minutes for quality
+
     while (result.status === 'starting' || result.status === 'processing') {
       pollCount++
       const elapsedTime = ((Date.now() - pollStartTime) / 1000).toFixed(1)
       console.log(`🔄 [${sessionId}] Poll #${pollCount} - Status: ${result.status} (${elapsedTime}s elapsed)`)
+
+      // Check for timeout
+      if (elapsedTime > maxTimeout) {
+        console.error(`⏰ [${sessionId}] Generation timeout after ${elapsedTime}s (max: ${maxTimeout}s)`)
+        throw new Error(`3D generation timed out after ${Math.round(elapsedTime / 60)} minutes. This may be due to high server load. Please try again.`)
+      }
 
       // Update progress based on elapsed time and quality mode
       if (elapsedTime < timeThresholds.phase1) {
@@ -149,7 +158,7 @@ export const generateModel = async (imageFile, description = '', options = {}) =
       } else if (elapsedTime < timeThresholds.phase3) {
         onProgress(`Generating 3D model with ${modelInfo.name}`, 'Refining mesh topology and surface details...')
       } else {
-        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Finalizing 3D model and preparing for download...')
+        onProgress(`Generating 3D model with ${modelInfo.name}`, `Taking longer than expected (${Math.round(elapsedTime / 60)}min)... Please wait...`)
       }
 
       await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
@@ -488,3 +497,5 @@ export const debugApiConnection = async () => {
 
   return debug
 }
+
+

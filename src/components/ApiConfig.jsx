@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { setApiToken, checkServerStatus } from '../services/hunyuan3d'
+import { setApiToken as setWeightApiToken } from '../services/weightEstimation'
 import './ApiConfig.css'
 
 const ApiConfig = ({ onConfigChange }) => {
@@ -13,7 +14,8 @@ const ApiConfig = ({ onConfigChange }) => {
     const savedToken = localStorage.getItem('replicate_api_token')
     if (savedToken) {
       setToken(savedToken)
-      setApiToken(savedToken)
+      setApiToken(savedToken) // For 3D generation
+      setWeightApiToken(savedToken) // For weight estimation
       validateToken(savedToken)
     }
   }, [])
@@ -21,7 +23,8 @@ const ApiConfig = ({ onConfigChange }) => {
   const validateToken = async (tokenToValidate) => {
     setIsChecking(true)
     try {
-      setApiToken(tokenToValidate)
+      setApiToken(tokenToValidate) // For 3D generation
+      setWeightApiToken(tokenToValidate) // For weight estimation
       const valid = await checkServerStatus()
       setIsValid(valid)
       onConfigChange?.(valid)

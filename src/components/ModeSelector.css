@@ -1,0 +1,327 @@
+.mode-selector-container {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e2e8f0;
+  margin-bottom: 1.5rem;
+}
+
+.selector-header {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.selector-header h3 {
+  color: #1e293b;
+  font-size: 1.3rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
+}
+
+.selector-header p {
+  color: #64748b;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+/* Mode Options */
+.mode-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.mode-option {
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: #f8fafc;
+  position: relative;
+}
+
+.mode-option:hover:not(.disabled) {
+  border-color: #3b82f6;
+  background: #eff6ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.mode-option.selected {
+  border-color: #10b981;
+  background: #f0fdf4;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
+
+.mode-option.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Mode Header */
+.mode-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.mode-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.mode-icon {
+  font-size: 1.5rem;
+}
+
+.mode-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.mode-radio {
+  position: relative;
+}
+
+.mode-radio input[type="radio"] {
+  width: 20px;
+  height: 20px;
+  cursor: pointer;
+  accent-color: #10b981;
+}
+
+/* Mode Description */
+.mode-description {
+  color: #64748b;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin-bottom: 1rem;
+}
+
+/* Mode Stats */
+.mode-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #64748b;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Pros and Cons */
+.mode-pros-cons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.pros, .cons {
+  background: white;
+  padding: 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.pros h5, .cons h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.pros ul, .cons ul {
+  margin: 0;
+  padding-left: 1rem;
+  list-style: none;
+}
+
+.pros li, .cons li {
+  font-size: 0.8rem;
+  color: #64748b;
+  margin-bottom: 0.25rem;
+  position: relative;
+  line-height: 1.4;
+}
+
+.pros li:before {
+  content: "•";
+  color: #10b981;
+  font-weight: bold;
+  position: absolute;
+  left: -0.75rem;
+}
+
+.cons li:before {
+  content: "•";
+  color: #f59e0b;
+  font-weight: bold;
+  position: absolute;
+  left: -0.75rem;
+}
+
+/* Recommendation */
+.mode-recommendation {
+  margin-top: 1rem;
+  padding: 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.recommendation.generate {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+}
+
+.recommendation.import {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+}
+
+.recommendation strong {
+  font-weight: 600;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .mode-selector-container {
+    padding: 1rem;
+  }
+  
+  .mode-options {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .mode-option {
+    padding: 1rem;
+  }
+  
+  .mode-header {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  
+  .mode-radio {
+    align-self: flex-end;
+  }
+  
+  .mode-stats {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .stat-item {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .mode-pros-cons {
+    grid-template-columns: 1fr;
+    gap: 0.75rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .mode-selector-container {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  
+  .selector-header h3 {
+    color: #f1f5f9;
+  }
+  
+  .selector-header p {
+    color: #94a3b8;
+  }
+  
+  .mode-option {
+    background: #0f172a;
+    border-color: #475569;
+  }
+  
+  .mode-option:hover:not(.disabled) {
+    background: #1e293b;
+    border-color: #3b82f6;
+  }
+  
+  .mode-option.selected {
+    background: #064e3b;
+    border-color: #10b981;
+  }
+  
+  .mode-name {
+    color: #f1f5f9;
+  }
+  
+  .mode-description {
+    color: #94a3b8;
+  }
+  
+  .mode-stats, .pros, .cons {
+    background: #1e293b;
+    border-color: #334155;
+  }
+  
+  .stat-label {
+    color: #94a3b8;
+  }
+  
+  .stat-value {
+    color: #f1f5f9;
+  }
+  
+  .pros h5, .cons h5 {
+    color: #cbd5e1;
+  }
+  
+  .pros li, .cons li {
+    color: #94a3b8;
+  }
+  
+  .recommendation.generate {
+    background: #1e3a8a;
+    border-color: #3b82f6;
+    color: #93c5fd;
+  }
+  
+  .recommendation.import {
+    background: #064e3b;
+    border-color: #10b981;
+    color: #6ee7b7;
+  }
+}
