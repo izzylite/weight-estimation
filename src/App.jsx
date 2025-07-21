@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react'
 import ImageUpload from './components/ImageUpload'
 import DescriptionInput from './components/DescriptionInput'
 import ModelViewer from './components/ModelViewer'
-import LoadingSpinner from './components/LoadingSpinner'
+import ProgressIndicator from './components/ProgressIndicator'
 import ApiConfig from './components/ApiConfig'
 import GenerationSettings from './components/GenerationSettings'
 import { generateModel } from './services/hunyuan3d'
@@ -17,10 +17,12 @@ function App() {
   const [analysisResult, setAnalysisResult] = useState(null)
   const [error, setError] = useState('')
   const [progress, setProgress] = useState('')
+  const [progressInfo, setProgressInfo] = useState('')
   const [isApiConfigured, setIsApiConfigured] = useState(false)
   const [generationSettings, setGenerationSettings] = useState({
     removeBackground: true,
-    generateTexture: false
+    generateTexture: false,
+    qualityMode: 'turbo' // Default to turbo for faster generation
   })
 
   const handleImageUpload = useCallback((file) => {
@@ -68,15 +70,28 @@ function App() {
 
     setIsGenerating(true)
     setError('')
-    setProgress('Generating 3D model with Replicate...')
+    const modelName = generationSettings.qualityMode === 'turbo' ? 'Hunyuan3D-2 Turbo' : 'Hunyuan3D-2.1 Quality'
+    setProgress(`Generating 3D model with ${modelName}`)
+    setProgressInfo(`Using ${generationSettings.qualityMode} mode • ${generationSettings.generateTexture ? 'textured' : 'geometry-only'} • ${generationSettings.removeBackground ? 'background removal' : 'original background'}`)
 
     try {
       console.log(`🔄 [App-${sessionId}] Starting 3D model generation...`)
-      // Generate 3D model with current settings
-      const blob = await generateModel(uploadedImage, description, generationSettings)
+
+      // Create progress callback
+      const handleProgress = (status, info) => {
+        setProgress(status)
+        setProgressInfo(info)
+      }
+
+      // Generate 3D model with current settings and progress callback
+      const blob = await generateModel(uploadedImage, description, {
+        ...generationSettings,
+        onProgress: handleProgress
+      })
       console.log(`✅ [App-${sessionId}] 3D model generated successfully`)
       setGeneratedBlob(blob)
-      setProgress('Analyzing volume...')
+      setProgress('Analyzing volume and geometry')
+      setProgressInfo('Loading 3D model and calculating precise volume measurements...')
 
       console.log(`📊 [App-${sessionId}] Starting volume analysis...`)
       // Analyze volume
@@ -88,11 +103,13 @@ function App() {
       })
       setAnalysisResult(analysis)
       setProgress('')
+      setProgressInfo('')
 
     } catch (err) {
       console.error(`❌ [App-${sessionId}] Generation failed:`, err.message)
       setError(err.message || 'Failed to generate 3D model')
       setProgress('')
+      setProgressInfo('')
     } finally {
       setIsGenerating(false)
       console.log(`🏁 [App-${sessionId}] Generation process completed`)
@@ -156,10 +173,12 @@ function App() {
               </p>
             )}
 
-            {progress && (
-              <div className="progress-message">
-                {progress}
-              </div>
+            {(isGenerating || progress) && (
+              <ProgressIndicator
+                status={progress}
+                isActive={isGenerating}
+                additionalInfo={progressInfo}
+              />
             )}
           </div>
 
@@ -172,9 +191,7 @@ function App() {
           )}
         </div>
 
-        {isGenerating && (
-          <LoadingSpinner message={progress || 'Processing...'} />
-        )}
+
 
         {analysisResult && (
           <ModelViewer

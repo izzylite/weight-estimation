@@ -41,6 +41,7 @@ const fileToDataURL = (file) => {
  * @param {Object} options - Additional generation options
  * @param {boolean} options.removeBackground - Remove background from input image (default: true)
  * @param {boolean} options.generateTexture - Generate PBR textures (default: false for faster processing)
+ * @param {Function} options.onProgress - Progress callback function (status, info)
  * @returns {Promise<Blob>} The generated GLB file as a blob
  */
 export const generateModel = async (imageFile, description = '', options = {}) => {
@@ -65,24 +66,40 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     // Extract options with defaults
     const {
       removeBackground = true,
-      generateTexture = false
+      generateTexture = false,
+      qualityMode = 'turbo', // 'turbo' for speed, 'quality' for best results
+      onProgress = () => {}
     } = options
 
     console.log(`⚙️ [${sessionId}] Generation settings:`, {
       removeBackground,
       generateTexture,
+      qualityMode,
       hasDescription: !!description?.trim()
     })
 
     // Convert image to data URL
     console.log(`🔄 [${sessionId}] Converting image to data URL...`)
+    onProgress('Preparing image for AI processing', 'Converting image format and optimizing for 3D generation...')
     const imageDataURL = await fileToDataURL(imageFile)
     console.log(`✅ [${sessionId}] Image converted, data URL length: ${imageDataURL.length} chars`)
 
-    // Step 1: Create prediction using enhanced Hunyuan3D-2.1 model with texture and background options
-    console.log(`📡 [${sessionId}] Creating prediction with Hunyuan3D-2.1...`)
+    // Step 1: Create prediction using appropriate Hunyuan3D model based on quality setting
+    const modelInfo = qualityMode === 'turbo'
+      ? {
+          version: 'b1b9449a1277e10402781c5d41eb30c0a0683504fb23fab591ca9dfc2aabe1cb', // ndreca/hunyuan3d-2 (Turbo)
+          name: 'Hunyuan3D-2 Turbo',
+          expectedTime: '~90 seconds'
+        }
+      : {
+          version: '1e4b5ad0343fd1ec8cfbf8c2a7f21a0c0c54f2dc9d115942893540bd965742e6', // ndreca/hunyuan3d-2.1 (Quality)
+          name: 'Hunyuan3D-2.1 Quality',
+          expectedTime: '~3-5 minutes'
+        }
+
+    console.log(`📡 [${sessionId}] Creating prediction with ${modelInfo.name} (${modelInfo.expectedTime})...`)
     const predictionPayload = {
-      version: '1e4b5ad0343fd1ec8cfbf8c2a7f21a0c0c54f2dc9d115942893540bd965742e6', // ndreca/hunyuan3d-2.1
+      version: modelInfo.version,
       input: {
         image: imageDataURL,
         remove_background: removeBackground,    // Remove background for cleaner models
@@ -97,25 +114,43 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     }
 
     console.log(`🔗 [${sessionId}] Sending prediction request to Replicate...`)
+    onProgress('Initializing AI model', `Connecting to ${modelInfo.name} and starting 3D generation process...`)
     const predictionResponse = await apiClient.post('/predictions', predictionPayload)
     const prediction = predictionResponse.data
 
     console.log(`✅ [${sessionId}] Prediction created:`, {
       id: prediction.id,
       status: prediction.status,
-      model: 'ndreca/hunyuan3d-2.1'
+      model: modelInfo.name
     })
 
     // Step 2: Poll for completion
     console.log(`⏳ [${sessionId}] Starting polling for completion...`)
+    onProgress(`Generating 3D model with ${modelInfo.name}`, 'AI is processing your image and creating 3D geometry...')
     let result = prediction
     let pollCount = 0
     const pollStartTime = Date.now()
+
+    // Adjust timing thresholds based on quality mode
+    const timeThresholds = qualityMode === 'turbo'
+      ? { phase1: 15, phase2: 45, phase3: 75 }  // Faster thresholds for turbo mode
+      : { phase1: 30, phase2: 90, phase3: 180 } // Original thresholds for quality mode
 
     while (result.status === 'starting' || result.status === 'processing') {
       pollCount++
       const elapsedTime = ((Date.now() - pollStartTime) / 1000).toFixed(1)
       console.log(`🔄 [${sessionId}] Poll #${pollCount} - Status: ${result.status} (${elapsedTime}s elapsed)`)
+
+      // Update progress based on elapsed time and quality mode
+      if (elapsedTime < timeThresholds.phase1) {
+        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Analyzing image features and object boundaries...')
+      } else if (elapsedTime < timeThresholds.phase2) {
+        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Creating 3D geometry from detected features...')
+      } else if (elapsedTime < timeThresholds.phase3) {
+        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Refining mesh topology and surface details...')
+      } else {
+        onProgress(`Generating 3D model with ${modelInfo.name}`, 'Finalizing 3D model and preparing for download...')
+      }
 
       await new Promise(resolve => setTimeout(resolve, 2000)) // Wait 2 seconds
 
@@ -157,6 +192,7 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     // Step 3: Download the GLB file
     const glbUrl = result.output
     console.log(`📥 [${sessionId}] Starting GLB download from: ${glbUrl}`)
+    onProgress('Downloading 3D model', 'Retrieving generated model file from server...')
 
     // Handle different types of output (string URL or object)
     let downloadUrl
