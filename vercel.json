@@ -1,0 +1,32 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/static-build",
+      "config": {
+        "distDir": "dist"
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/replicate/(.*)",
+      "destination": "https://api.replicate.com/$1"
+    },
+    {
+      "source": "/api/download/(.*)",
+      "destination": "https://replicate.delivery/$1"
+    }
+  ]
+}

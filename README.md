@@ -32,7 +32,7 @@ This application uses the **Replicate API** to access Hunyuan3D-2, so you need:
 
 1. **Clone this repository**
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/izzylite/weight-estimation.git
 cd weight-estimation
 ```
 
@@ -48,6 +48,49 @@ npm run dev
 
 4. **Open your browser**
 Navigate to `http://localhost:5173` (or the port shown in terminal)
+
+## Deployment
+
+### Deploy to Vercel (Recommended)
+
+1. **Fork or clone this repository**
+
+2. **Sign up for Vercel** at [vercel.com](https://vercel.com)
+
+3. **Connect your GitHub account** to Vercel
+
+4. **Import the project**:
+   - Click "New Project" in Vercel dashboard
+   - Select this repository
+   - Vercel will auto-detect it as a Vite project
+
+5. **Configure environment variables**:
+   - In Vercel project settings, go to "Environment Variables"
+   - Add: `VITE_REPLICATE_API_TOKEN` with your Replicate API token
+
+6. **Deploy**: Click "Deploy" - your app will be live in minutes!
+
+### Deploy to Netlify
+
+1. **Build the project**:
+```bash
+npm run build
+```
+
+2. **Deploy to Netlify**:
+   - Drag the `dist` folder to [netlify.com/drop](https://netlify.com/drop)
+   - Or connect your GitHub repo for automatic deployments
+
+3. **Set environment variables** in Netlify site settings
+
+### Environment Variables
+
+Create a `.env` file (copy from `.env.example`):
+```bash
+VITE_REPLICATE_API_TOKEN=your_replicate_api_token_here
+```
+
+**Important**: Never commit your actual API token to version control!
 
 ## Usage
 
