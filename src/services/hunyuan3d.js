@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Configuration for the Replicate API
 const API_CONFIG = {
-  baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate', // Use proxy in dev, direct in prod
+  baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate',
   timeout: 300000, // 5 minutes timeout for 3D generation
   apiToken: '', // Set your Replicate API token here
 }
@@ -426,49 +426,55 @@ export const checkServerStatus = async () => {
       return false
     }
 
-    // First test if proxy is working
-    const proxyWorking = await testProxy()
-    if (!proxyWorking) {
+    // Basic token format validation (Replicate tokens start with 'r8_')
+    const isValidFormat = API_CONFIG.apiToken.startsWith('r8_') && API_CONFIG.apiToken.length > 10
+    if (!isValidFormat) {
+      console.error('❌ Invalid token format')
       return false
     }
 
-    // Try proxy first, then fallback to direct API call
-    let response
-    try {
-      // Try using the proxy endpoint first
-      response = await fetch('/api/replicate/account', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.apiToken}`,
-          'Content-Type': 'application/json',
-        },
-      })
-    } catch (proxyError) {
-      // Fallback to direct API call
-      response = await fetch('https://api.replicate.com/v1/account', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${API_CONFIG.apiToken}`,
-          'Content-Type': 'application/json',
-        },
-        mode: 'cors',
-      })
+    // In production, we can't validate the token directly due to CORS restrictions
+    // We'll validate the token format and return true, actual validation happens during API calls
+    if (import.meta.env.PROD) {
+      console.log('✅ Token format appears valid (production mode - validation will occur during API calls)')
+      return true
     }
+
+    // In development, test the proxy first
+    const proxyWorking = await testProxy()
+    if (!proxyWorking) {
+      console.error('❌ Proxy not working in development mode')
+      return false
+    }
+
+    // Try using the proxy endpoint to validate the token
+    const response = await fetch('/api/replicate/account', {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${API_CONFIG.apiToken}`,
+        'Content-Type': 'application/json',
+      },
+    })
 
     if (!response.ok) {
       if (response.status === 401) {
-        throw new Error('Invalid API token')
+        console.error('❌ Invalid API token')
+        return false
       } else if (response.status === 403) {
-        throw new Error('API token does not have required permissions')
+        console.error('❌ API token does not have required permissions')
+        return false
       } else {
-        throw new Error(`API request failed with status ${response.status}`)
+        console.error(`❌ API request failed with status ${response.status}`)
+        return false
       }
     }
 
-    await response.json()
+    const data = await response.json()
+    console.log('✅ API connection successful:', data)
     return true
 
   } catch (error) {
+    console.error('❌ API connection failed:', error)
     return false
   }
 }

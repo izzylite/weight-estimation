@@ -2,7 +2,7 @@ import axios from 'axios'
 
 // Configuration for the Replicate API (shared with 3D generation)
 const API_CONFIG = {
-  baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate', // Use proxy in dev, direct in prod
+  baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate',
   timeout: 300000, // 5 minutes timeout
   apiToken: '', // Set your Replicate API token here
 }
