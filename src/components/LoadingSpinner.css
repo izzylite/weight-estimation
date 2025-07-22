@@ -168,38 +168,7 @@
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .loading-container {
-    background: linear-gradient(135deg, #2a2a2a, #1a1a1a);
-    border-color: #444;
-  }
-  
-  .spinner {
-    border-color: #444;
-    border-top-color: #646cff;
-  }
-  
-  .spinner-inner {
-    border-top-color: #747bff;
-  }
-  
-  .loading-message h3 {
-    color: #fff;
-  }
-  
-  .loading-message p {
-    color: #ccc;
-  }
-  
-  .tip-item {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-  
-  .tip-item span:last-child {
-    color: #ccc;
-  }
-}
+
 
 @media (prefers-reduced-motion: reduce) {
   .spinner,

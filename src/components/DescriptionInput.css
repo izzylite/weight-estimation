@@ -78,38 +78,7 @@
   color: white;
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .description-textarea {
-    background: #1f2937;
-    border-color: #374151;
-    color: #f9fafb;
-  }
 
-  .description-textarea:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
-  }
-
-  .description-textarea.disabled {
-    background: #111827;
-    color: var(--gray-500);
-  }
-
-  .description-textarea::placeholder {
-    color: var(--gray-400);
-  }
-
-  .clear-button {
-    background: #374151;
-    color: #d1d5db;
-  }
-
-  .clear-button:hover {
-    background: var(--error-color);
-    color: white;
-  }
-}
 
 
 .description-tips ul {
@@ -123,60 +92,7 @@
   font-size: 0.9rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .description-header h3 {
-    color: #fff;
-  }
 
-  .char-counter {
-    color: #ccc;
-  }
-
-  .description-textarea {
-    background-color: #2a2a2a;
-    border-color: #555;
-    color: #fff;
-  }
-
-  .description-textarea:focus {
-    border-color: #646cff;
-    box-shadow: 0 0 0 3px rgba(100, 108, 255, 0.2);
-  }
-
-  .description-textarea.disabled {
-    background-color: #1a1a1a;
-    color: #666;
-  }
-
-  .description-textarea::placeholder {
-    color: #666;
-  }
-
-  .clear-description-button {
-    background: rgba(0, 0, 0, 0.8);
-    border-color: #555;
-    color: #ccc;
-  }
-
-  .clear-description-button:hover {
-    background: rgba(0, 0, 0, 0.9);
-    color: #ff6666;
-    border-color: #ff6666;
-  }
-
-  .description-tips {
-    background-color: #2a2a2a;
-    border-left-color: #646cff;
-  }
-
-  .description-tips p {
-    color: #fff;
-  }
-
-  .description-tips li {
-    color: #ccc;
-  }
-}
 
 @media (max-width: 768px) {
   .description-header {

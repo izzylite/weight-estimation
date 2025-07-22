@@ -210,60 +210,7 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .cache-manager {
-    background: var(--gray-800);
-    border-color: var(--gray-700);
-  }
 
-  .cache-header h4 {
-    color: var(--gray-100);
-  }
-
-  .toggle-details {
-    color: var(--gray-300);
-  }
-
-  .toggle-details:hover {
-    background: var(--gray-700);
-  }
-
-  .cache-indicator {
-    color: var(--gray-400);
-  }
-
-  .cache-stats {
-    background: var(--gray-700);
-    border-color: var(--gray-600);
-  }
-
-  .stat-label {
-    color: var(--gray-400);
-  }
-
-  .stat-value {
-    color: var(--gray-100);
-  }
-
-  .cache-info {
-    background: rgba(59, 130, 246, 0.1);
-    border-color: rgba(59, 130, 246, 0.3);
-  }
-
-  .cache-info p {
-    color: #93c5fd;
-  }
-
-  .empty-cache {
-    background: var(--gray-700);
-    border-color: var(--gray-600);
-  }
-
-  .empty-cache p {
-    color: var(--gray-400);
-  }
-}
 
 /* Responsive adjustments */
 @media (max-width: 768px) {

@@ -286,16 +286,7 @@
   }
 }
 
-/* Dark mode adjustments */
-@media (prefers-color-scheme: dark) {
-  .error-details {
-    background-color: var(--bg-primary);
-  }
-  
-  .troubleshooting-content {
-    background-color: var(--bg-primary);
-  }
-}
+
 
 /* Animation for error icon */
 .error-icon {

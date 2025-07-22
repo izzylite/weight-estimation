@@ -172,53 +172,7 @@
   background: var(--gray-100);
   color: var(--gray-700);
 }
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .import-dropzone {
-    background: #111827;
-    border-color: #374151;
-  }
 
-  .import-dropzone:hover:not(.disabled) {
-    border-color: var(--primary-color);
-    background: #1e3a8a;
-  }
-
-  .import-dropzone.drag-active {
-    border-color: var(--success-color);
-    background: #064e3b;
-  }
-
-  .import-dropzone.disabled {
-    background: #0f172a;
-  }
-
-  .import-dropzone.has-file {
-    background: #064e3b;
-    border-color: var(--success-color);
-  }
-
-  .clear-file-btn {
-    background: #374151;
-    color: #d1d5db;
-  }
-
-  .clear-file-btn:hover {
-    background: var(--error-color);
-    color: white;
-  }
-
-  .import-tips summary {
-    background: #111827;
-    border-color: #374151;
-    color: var(--gray-400);
-  }
-
-  .import-tips summary:hover {
-    background: #1f2937;
-    color: var(--gray-300);
-  }
-}
 
 /* Responsive Design */
 @media (max-width: 640px) {

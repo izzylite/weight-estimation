@@ -91,22 +91,7 @@
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .mode-option {
-    background: #1f2937;
-    border-color: #374151;
-  }
 
-  .mode-option:hover {
-    border-color: var(--primary-color);
-  }
-
-  .mode-option.selected {
-    background: #1e3a8a;
-    border-color: var(--primary-color);
-  }
-}
  
 .pros li:before {
   content: "•";
@@ -191,74 +176,4 @@
   }
 }
 
-/* Dark mode support */
-@media (prefers-color-scheme: dark) {
-  .mode-selector-container {
-    background: #1e293b;
-    border-color: #334155;
-  }
-  
-  .selector-header h3 {
-    color: #f1f5f9;
-  }
-  
-  .selector-header p {
-    color: #94a3b8;
-  }
-  
-  .mode-option {
-    background: #0f172a;
-    border-color: #475569;
-  }
-  
-  .mode-option:hover:not(.disabled) {
-    background: #1e293b;
-    border-color: #3b82f6;
-  }
-  
-  .mode-option.selected {
-    background: #064e3b;
-    border-color: #10b981;
-  }
-  
-  .mode-name {
-    color: #f1f5f9;
-  }
-  
-  .mode-description {
-    color: #94a3b8;
-  }
-  
-  .mode-stats, .pros, .cons {
-    background: #1e293b;
-    border-color: #334155;
-  }
-  
-  .stat-label {
-    color: #94a3b8;
-  }
-  
-  .stat-value {
-    color: #f1f5f9;
-  }
-  
-  .pros h5, .cons h5 {
-    color: #cbd5e1;
-  }
-  
-  .pros li, .cons li {
-    color: #94a3b8;
-  }
-  
-  .recommendation.generate {
-    background: #1e3a8a;
-    border-color: #3b82f6;
-    color: #93c5fd;
-  }
-  
-  .recommendation.import {
-    background: #064e3b;
-    border-color: #10b981;
-    color: #6ee7b7;
-  }
-}
+
