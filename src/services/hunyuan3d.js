@@ -265,56 +265,71 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     let glbResponse
     try {
 
-      // Strategy 1: Try proxy first for replicate.delivery URLs (most likely to work)
-      if (downloadUrl.includes('replicate.delivery')) {
-        console.log(`🔗 [${sessionId}] Using proxy strategy for replicate.delivery URL`)
-        try {
-          const proxyUrl = downloadUrl.replace('https://replicate.delivery', '/api/download')
-          console.log(`📡 [${sessionId}] Proxy URL: ${proxyUrl}`)
-          glbResponse = await fetch(proxyUrl)
+      if (import.meta.env.PROD) {
+        // In production, use CORS proxy for all downloads
+        const corsProxyUrl = `https://corsproxy.io/?${downloadUrl}`
+        console.log(`🔗 [${sessionId}] Using CORS proxy for production download`)
+        glbResponse = await fetch(corsProxyUrl, {
+          mode: 'cors',
+          credentials: 'omit'
+        })
 
-          if (glbResponse.ok) {
-            const contentType = glbResponse.headers.get('content-type')
+        if (!glbResponse.ok) {
+          throw new Error(`CORS proxy download failed: HTTP ${glbResponse.status}`)
+        }
 
-            // Check if we got HTML instead of binary data
-            if (contentType && contentType.includes('text/html')) {
-              throw new Error('Proxy returned HTML instead of binary data')
+        const contentType = glbResponse.headers.get('content-type')
+        if (contentType && contentType.includes('text/html')) {
+          throw new Error('CORS proxy returned HTML instead of binary data')
+        }
+      } else {
+        // In development, try proxy first for replicate.delivery URLs
+        if (downloadUrl.includes('replicate.delivery')) {
+          console.log(`🔗 [${sessionId}] Using dev proxy strategy for replicate.delivery URL`)
+          try {
+            const proxyUrl = downloadUrl.replace('https://replicate.delivery', '/api/download')
+            console.log(`📡 [${sessionId}] Proxy URL: ${proxyUrl}`)
+            glbResponse = await fetch(proxyUrl)
+
+            if (glbResponse.ok) {
+              const contentType = glbResponse.headers.get('content-type')
+              if (contentType && contentType.includes('text/html')) {
+                throw new Error('Proxy returned HTML instead of binary data')
+              }
+            } else {
+              throw new Error(`Proxy HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
             }
-          } else {
-            throw new Error(`Proxy HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
+          } catch (proxyError) {
+            // Fallback to direct download in development
+            glbResponse = await fetch(downloadUrl, {
+              mode: 'cors',
+              credentials: 'omit'
+            })
+
+            if (!glbResponse.ok) {
+              throw new Error(`Direct download failed: HTTP ${glbResponse.status}`)
+            }
+
+            const contentType = glbResponse.headers.get('content-type')
+            if (contentType && contentType.includes('text/html')) {
+              throw new Error('Direct download returned HTML instead of binary data')
+            }
           }
-        } catch (proxyError) {
-          // Strategy 2: Fallback to direct download
+        } else {
+          // For non-replicate.delivery URLs in development, try direct download
           glbResponse = await fetch(downloadUrl, {
             mode: 'cors',
             credentials: 'omit'
           })
 
           if (!glbResponse.ok) {
-            throw new Error(`Direct download failed: HTTP ${glbResponse.status}`)
+            throw new Error(`HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
           }
 
           const contentType = glbResponse.headers.get('content-type')
-
           if (contentType && contentType.includes('text/html')) {
-            throw new Error('Direct download returned HTML instead of binary data')
+            throw new Error('Got HTML instead of binary data - CORS issue')
           }
-        }
-      } else {
-        // For non-replicate.delivery URLs, try direct download only
-        glbResponse = await fetch(downloadUrl, {
-          mode: 'cors',
-          credentials: 'omit'
-        })
-
-        if (!glbResponse.ok) {
-          throw new Error(`HTTP ${glbResponse.status}: ${glbResponse.statusText}`)
-        }
-
-        const contentType = glbResponse.headers.get('content-type')
-
-        if (contentType && contentType.includes('text/html')) {
-          throw new Error('Got HTML instead of binary data - CORS issue')
         }
       }
 
