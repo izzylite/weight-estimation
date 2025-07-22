@@ -27,6 +27,48 @@
   font-weight: 700;
 }
 
+/* Multi-pack Information */
+.multipack-info {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border: 2px solid #f59e0b;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.multipack-info h3 {
+  color: #92400e;
+  font-size: 1.3rem;
+  margin-bottom: 1rem;
+  font-weight: 600;
+}
+
+.multipack-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.multipack-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  border: 1px solid #f59e0b;
+}
+
+.multipack-detail .label {
+  font-weight: 600;
+  color: #92400e;
+}
+
+.multipack-detail .value {
+  font-weight: 700;
+  color: #451a03;
+}
+
 .main-result {
   background: white;
   padding: 2rem;

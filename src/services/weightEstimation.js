@@ -1,5 +1,8 @@
 import axios from 'axios'
 
+// GPT-4o-mini: ~$0.01-0.02 per request
+// Claude 4 Sonnet: ~$0.02-0.04 per request
+// GPT-4o: ~$0.05-0.10 per request
 // Configuration for the Replicate API (shared with 3D generation)
 const API_CONFIG = {
   baseURL: import.meta.env.PROD
@@ -43,6 +46,7 @@ const fileToDataURL = (file) => {
  * @param {string} description - Optional description of the object
  * @param {Object} options - Additional options
  * @param {Function} options.onProgress - Progress callback function
+ * @param {Object} options.modelMetadata - Optional 3D model metadata (vertices, faces, dimensions, etc.)
  * @returns {Promise<Object>} Weight estimation results
  */
 export const estimateWeight = async (imageFile, volume, description = '', options = {}) => {
@@ -76,7 +80,7 @@ export const estimateWeight = async (imageFile, volume, description = '', option
       throw new Error('Replicate API token not configured. Please set your API token in the service configuration.')
     }
 
-    const { onProgress = () => {} } = options
+    const { onProgress = () => {}, modelMetadata = null } = options
 
     // Convert image to data URL
     console.log(`🔄 [${sessionId}] Converting image to data URL...`)
@@ -84,36 +88,72 @@ export const estimateWeight = async (imageFile, volume, description = '', option
     const imageDataURL = await fileToDataURL(imageFile)
     console.log(`✅ [${sessionId}] Image converted, data URL length: ${imageDataURL.length} chars`)
 
-    // Create detailed prompt for weight estimation
+    // Create detailed prompt for weight estimation with optional 3D model data
+    let modelDataSection = ''
+    if (modelMetadata) {
+      console.log(`📐 [${sessionId}] Including 3D model metadata in analysis`)
+      modelDataSection = `
+
+3D MODEL GEOMETRY DATA:
+- Vertices: ${modelMetadata.vertices || 'unknown'} (higher values indicate more detailed geometry)
+- Faces: ${modelMetadata.faces || 'unknown'} (higher values indicate more complex surface)
+- Bounding Box: ${modelMetadata.boundingBox ? `${modelMetadata.boundingBox.x.toFixed(2)} × ${modelMetadata.boundingBox.y.toFixed(2)} × ${modelMetadata.boundingBox.z.toFixed(2)} units` : 'unknown'} (overall dimensions)
+- Surface Area: ${modelMetadata.surfaceArea ? modelMetadata.surfaceArea.toFixed(6) + ' square units' : 'unknown'} (total exterior surface)
+- Mesh Complexity: ${modelMetadata.complexity || 'unknown'} (indicates level of detail)
+- Volume-to-Surface Ratio: ${modelMetadata.surfaceArea ? (volume / modelMetadata.surfaceArea).toFixed(4) : 'unknown'} (lower values suggest hollow or thin-walled structures, higher values suggest solid objects)
+- Mesh Count: ${modelMetadata.meshCount || 'unknown'} (number of separate mesh components)`
+    }
+
     const prompt = `Analyze this object and estimate its weight based on the following information:
 
 CALCULATED VOLUME: ${volume.toFixed(6)} cubic units
-OBJECT DESCRIPTION: ${description || 'No description provided'}
+OBJECT DESCRIPTION: ${description || 'No description provided'}${modelDataSection}
 
-Please analyze:
-1. Material type and properties (plastic, metal, wood, ceramic, etc.)
-2. Object structure (solid, hollow, thick/thin walls)
-3. Visual density cues (surface texture, transparency, color)
-4. Typical weight ranges for similar objects
-5. Estimated material density
+CRITICAL ANALYSIS STEPS:
+1. IDENTIFY THE OBJECT TYPE: Look carefully at the image - is this:
+   - A single item (one can, one bottle, one object)
+   - A multi-pack/case (multiple items in packaging like "12x500ml", "6-pack", "case of...")
+   - A container with multiple units inside
+
+2. COUNT AND SCALE: If you see text like "12x", "6-pack", "case", or multiple identical items:
+   - The volume represents the ENTIRE package/case
+   - Divide the total weight by the number of units
+   - Consider both the individual items AND the packaging weight
+
+3. MATERIAL ANALYSIS:
+   - Primary material type and properties (aluminum, plastic, glass, cardboard, etc.)
+   - Packaging materials (cardboard box, plastic wrap, etc.)
+   - Object structure (solid, hollow, thick/thin walls)
+   - Visual density cues (surface texture, transparency, color)
+
+4. WEIGHT ESTIMATION:
+   - For single items: Use volume × material density
+   - For multi-packs: (Individual item weight × quantity) + packaging weight
+   - Consider typical weight ranges for similar objects
+   - Account for air gaps in packaging${modelMetadata ? '\n\n5. 3D GEOMETRY ANALYSIS:\n   - Use mesh complexity and surface area for structural assessment\n   - Volume-to-surface ratio helps determine hollow vs solid structures\n   - Multiple mesh components may indicate separate items in a package' : ''}
 
 Provide your analysis in this exact JSON format:
 {
-  "estimatedWeight": [weight in grams],
+  "estimatedWeight": [total weight in grams],
   "unit": "grams",
   "confidence": [0.0 to 1.0],
   "materialType": "[primary material]",
   "density": [estimated density in g/cm³],
-  "reasoning": "[detailed explanation of your analysis]",
+  "reasoning": "[detailed explanation including whether this is single item or multi-pack]",
   "weightRange": {
     "min": [minimum weight estimate],
     "max": [maximum weight estimate]
   },
   "structure": "[solid/hollow/mixed]",
+  "itemType": "[single/multi-pack/case]",
+  "itemCount": [number of individual items if multi-pack, 1 if single],
+  "individualItemWeight": [weight per item in grams if multi-pack],
+  "packagingWeight": [estimated packaging weight in grams],
   "certaintyFactors": {
     "materialIdentification": [0.0 to 1.0],
     "structureAssessment": [0.0 to 1.0],
-    "densityEstimation": [0.0 to 1.0]
+    "densityEstimation": [0.0 to 1.0],
+    "scaleIdentification": [0.0 to 1.0 - confidence in identifying single vs multi-pack]
   }
 }
 
@@ -273,8 +313,44 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       const jsonMatch = outputText.match(/\{[\s\S]*\}/)
 
       if (jsonMatch) {
-        analysisResult = JSON.parse(jsonMatch[0])
-        console.log(`✅ [${sessionId}] Successfully parsed AI analysis`)
+        const parsedResult = JSON.parse(jsonMatch[0])
+
+        // Set defaults for new fields if they don't exist (backward compatibility)
+        if (parsedResult.itemType === undefined) {
+          parsedResult.itemType = 'single'
+        }
+
+        if (parsedResult.itemCount === undefined) {
+          parsedResult.itemCount = 1
+        }
+
+        if (parsedResult.individualItemWeight === undefined && parsedResult.itemCount > 1) {
+          parsedResult.individualItemWeight = parsedResult.estimatedWeight / parsedResult.itemCount
+        }
+
+        if (parsedResult.packagingWeight === undefined && parsedResult.itemCount > 1) {
+          // Estimate packaging as 5-10% of total weight if not provided
+          parsedResult.packagingWeight = parsedResult.estimatedWeight * 0.08
+        }
+
+        // Add certainty factor for scale identification if missing
+        if (parsedResult.certaintyFactors && parsedResult.certaintyFactors.scaleIdentification === undefined) {
+          parsedResult.certaintyFactors.scaleIdentification = 0.7
+        }
+
+        analysisResult = {
+          ...parsedResult,
+          volume: volume,
+          processingTime: ((Date.now() - startTime) / 1000).toFixed(1),
+          sessionId: sessionId
+        }
+
+        console.log(`✅ [${sessionId}] Successfully parsed AI analysis:`, {
+          itemType: analysisResult.itemType,
+          itemCount: analysisResult.itemCount,
+          totalWeight: analysisResult.estimatedWeight,
+          individualWeight: analysisResult.individualItemWeight
+        })
       } else {
         throw new Error('No valid JSON found in AI response')
       }
@@ -294,11 +370,19 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
           max: volume * 2000
         },
         structure: 'unknown',
+        itemType: 'single',
+        itemCount: 1,
+        individualItemWeight: volume * 1000,
+        packagingWeight: 0,
         certaintyFactors: {
           materialIdentification: 0.1,
           structureAssessment: 0.1,
-          densityEstimation: 0.1
-        }
+          densityEstimation: 0.1,
+          scaleIdentification: 0.1
+        },
+        volume: volume,
+        processingTime: ((Date.now() - startTime) / 1000).toFixed(1),
+        sessionId: sessionId
       }
     }
 

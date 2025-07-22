@@ -9,6 +9,7 @@ import ErrorHandlingStep from './components/steps/ErrorHandlingStep'
 import { generateModel, setApiToken } from './services/hunyuan3d'
 import { estimateWeight, setApiToken as setWeightApiToken } from './services/weightEstimation'
 import { analyzeModelVolume } from './utils/volumeCalculator'
+import { extractModelMetadata } from './utils/modelMetadataExtractor'
 import './App.css'
 
 function App() {
@@ -262,6 +263,13 @@ function App() {
       })
       setAnalysisResult(analysis)
 
+      // Extract detailed 3D model metadata for enhanced AI analysis
+      console.log(`📐 [App-${sessionId}] Extracting 3D model metadata...`)
+      setProgress('Extracting 3D model metadata')
+      setProgressInfo('Analyzing mesh geometry, surface area, and structural properties...')
+      const modelMetadata = await extractModelMetadata(blob)
+      console.log(`✅ [App-${sessionId}] Model metadata extracted:`, modelMetadata)
+
       // Now estimate weight using AI
       console.log(`⚖️ [App-${sessionId}] Starting weight estimation...`)
       setProgress('Estimating weight with AI')
@@ -302,10 +310,11 @@ function App() {
           sessionId: sessionId
         }
       } else if (uploadedImage) {
-        // Use AI estimation with image (works for both generate and import modes)
-        console.log(`🤖 [App-${sessionId}] Using AI estimation with image`)
+        // Use AI estimation with image and 3D model metadata (works for both generate and import modes)
+        console.log(`🤖 [App-${sessionId}] Using AI estimation with image and 3D model metadata`)
         weightEstimation = await estimateWeight(uploadedImage, analysis.volume, description, {
-          onProgress: handleProgress
+          onProgress: handleProgress,
+          modelMetadata: modelMetadata
         })
       } else {
         // Fallback for import mode without image - use basic volume-based estimation

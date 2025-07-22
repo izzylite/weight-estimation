@@ -32,7 +32,11 @@ const WeightEstimationResult = ({
     structure,
     certaintyFactors,
     volume,
-    processingTime
+    processingTime,
+    itemType = 'single',
+    itemCount = 1,
+    individualItemWeight,
+    packagingWeight
   } = weightResult
 
   const confidencePercentage = (confidence * 100).toFixed(1)
@@ -62,6 +66,35 @@ const WeightEstimationResult = ({
             Range: {formatWeight(weightRange.min)} - {formatWeight(weightRange.max)}
           </div>
         </div>
+
+        {/* Multi-pack Information */}
+        {itemType !== 'single' && (
+          <div className="multipack-info">
+            <h3>📦 Multi-Pack Analysis</h3>
+            <div className="multipack-grid">
+              <div className="multipack-detail">
+                <span className="label">Package Type:</span>
+                <span className="value">{itemType}</span>
+              </div>
+              <div className="multipack-detail">
+                <span className="label">Item Count:</span>
+                <span className="value">{itemCount} items</span>
+              </div>
+              {individualItemWeight && (
+                <div className="multipack-detail">
+                  <span className="label">Per Item Weight:</span>
+                  <span className="value">{formatWeight(individualItemWeight)}</span>
+                </div>
+              )}
+              {packagingWeight > 0 && (
+                <div className="multipack-detail">
+                  <span className="label">Packaging Weight:</span>
+                  <span className="value">{formatWeight(packagingWeight)}</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Detailed Analysis */}
