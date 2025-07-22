@@ -3,7 +3,7 @@ import { getCachedModel, cacheModel } from './modelCache'
 
 // Configuration for the Replicate API
 const API_CONFIG = {
-  baseURL: '/api/replicate', // Use Vite proxy to avoid CORS issues
+  baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate', // Use proxy in dev, direct in prod
   timeout: 300000, // 5 minutes timeout for 3D generation
   apiToken: '', // Set your Replicate API token here
 }
@@ -296,8 +296,8 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     let glbResponse
     try {
 
-      // Strategy 1: Try proxy first for replicate.delivery URLs (most likely to work)
-      if (downloadUrl.includes('replicate.delivery')) {
+      // Strategy 1: Try proxy first for replicate.delivery URLs in development
+      if (downloadUrl.includes('replicate.delivery') && !import.meta.env.PROD) {
         console.log(`🔗 [${sessionId}] Using proxy strategy for replicate.delivery URL`)
         try {
           const proxyUrl = downloadUrl.replace('https://replicate.delivery', '/api/download')

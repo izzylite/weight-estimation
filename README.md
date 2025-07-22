@@ -51,7 +51,31 @@ Navigate to `http://localhost:5173` (or the port shown in terminal)
 
 ## Deployment
 
-### Deploy to Vercel (Recommended)
+### Deploy to GitHub Pages (Recommended)
+
+This project is configured for automatic deployment to GitHub Pages using GitHub Actions.
+
+1. **Fork this repository** to your GitHub account
+
+2. **Enable GitHub Pages**:
+   - Go to your repository settings
+   - Scroll to "Pages" section
+   - Source: "Deploy from a branch"
+   - Branch: Select "gh-pages"
+   - Click "Save"
+
+3. **Add your Replicate API token**:
+   - Go to repository Settings → Secrets and variables → Actions
+   - Click "New repository secret"
+   - Name: `VITE_REPLICATE_API_TOKEN`
+   - Value: Your Replicate API token (starts with `r8_...`)
+   - Click "Add secret"
+
+4. **Deploy**: Push any changes to the `master` branch and GitHub Actions will automatically build and deploy your app!
+
+Your app will be available at: `https://yourusername.github.io/weight-estimation/`
+
+### Deploy to Vercel
 
 1. **Fork or clone this repository**
 
