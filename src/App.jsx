@@ -360,10 +360,12 @@ function App() {
       setProgressInfo('')
 
     } catch (err) {
-      console.error(`❌ [App-${sessionId}] Generation failed:`, err.message)
+      const errorMessage = err?.message || err?.toString() || 'Unknown error occurred'
+      console.error(`❌ [App-${sessionId}] Generation failed:`, errorMessage)
+      console.error(`❌ [App-${sessionId}] Full error object:`, err)
 
       // Set detailed error information for the error handling page
-      setError(err.message || 'Failed to generate 3D model and estimate weight')
+      setError(errorMessage || 'Failed to generate 3D model and estimate weight')
       setErrorDetails({
         timestamp: new Date().toISOString(),
         sessionId: sessionId,

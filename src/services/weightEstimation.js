@@ -25,11 +25,11 @@ const AI_MODELS = {
     recommended: true
   },
   'claude-4-sonnet': {
-    version: 'ca312200fcb03d97da08cf9dec3a4f7ff3be5bddd0e8ff6c9198b563a28b2559',
+    version: 'anthropic/claude-4-sonnet', // Use Claude 4 Sonnet
     name: 'Claude 4 Sonnet',
     description: 'Superior reasoning and analysis',
     costRange: '$0.02-0.04 per request',
-    inputFormat: 'claude', // prompt + image format (Replicate's Claude format)
+    inputFormat: 'messages', // Uses Anthropic Messages API format
     maxTokens: 1500,
     temperature: 0.1,
     recommended: false
@@ -83,7 +83,13 @@ export const getCurrentModel = () => {
  * @returns {Object} Current model configuration
  */
 export const getCurrentModelConfig = () => {
-  return AI_MODELS[selectedModel]
+  const config = AI_MODELS[selectedModel]
+  if (!config) {
+    console.error(`❌ Model configuration not found for: ${selectedModel}. Available models:`, Object.keys(AI_MODELS))
+    // Return default config to prevent crashes
+    return AI_MODELS['gpt-4o-mini'] || {}
+  }
+  return config
 }
 
 // Create axios instance with default config
@@ -103,6 +109,17 @@ const apiClient = axios.create({
  */
 const fileToDataURL = (file) => {
   return new Promise((resolve, reject) => {
+    // Validate file parameter
+    if (!file) {
+      reject(new Error('No file provided to fileToDataURL'))
+      return
+    }
+
+    if (!(file instanceof File) && !(file instanceof Blob)) {
+      reject(new Error(`Invalid file type provided to fileToDataURL: ${typeof file}`))
+      return
+    }
+
     const reader = new FileReader()
     reader.onload = () => {
       // Replicate expects full data URL (data:image/png;base64,...)
@@ -130,15 +147,26 @@ export const estimateWeight = async (imageFile, volume, description = '', option
   console.log(`⚖️ [${sessionId}] Starting weight estimation`)
   console.log(`📊 [${sessionId}] Input volume: ${volume.toFixed(6)} cubic units`)
 
+  // Validate imageFile parameter
   if (!imageFile) {
     console.log(`⚠️ [${sessionId}] No image file provided - this should not happen, use volume-based estimation instead`)
     throw new Error('No image file provided for AI weight estimation')
   }
 
+  // Check if imageFile is a valid File object
+  if (!(imageFile instanceof File) && !(imageFile instanceof Blob)) {
+    console.error(`❌ [${sessionId}] Invalid image file type:`, {
+      imageFile,
+      type: typeof imageFile,
+      constructor: imageFile?.constructor?.name
+    })
+    throw new Error('Invalid image file provided - expected File or Blob object')
+  }
+
   console.log(`📁 [${sessionId}] Image file:`, {
-    name: imageFile.name,
-    size: `${(imageFile.size / 1024 / 1024).toFixed(2)} MB`,
-    type: imageFile.type
+    name: imageFile.name || 'unknown',
+    size: imageFile.size ? `${(imageFile.size / 1024 / 1024).toFixed(2)} MB` : 'unknown',
+    type: imageFile.type || 'unknown'
   })
 
   try {
@@ -254,32 +282,48 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
     // Validate inputs before creating prediction
     console.log(`🔍 [${sessionId}] Validating inputs:`, {
       hasPrompt: !!prompt,
-      promptLength: prompt ? prompt.length : 0,
+      promptType: typeof prompt,
+      promptLength: (prompt && typeof prompt === 'string') ? prompt.length : 0,
       hasImageDataURL: !!imageDataURL,
-      imageDataURLLength: imageDataURL ? imageDataURL.length : 0,
-      imageDataURLPrefix: imageDataURL ? imageDataURL.substring(0, 30) + '...' : 'none'
+      imageDataURLType: typeof imageDataURL,
+      imageDataURLLength: (imageDataURL && typeof imageDataURL === 'string') ? imageDataURL.length : 0,
+      imageDataURLPrefix: (imageDataURL && typeof imageDataURL === 'string') ? imageDataURL.substring(0, 30) + '...' : 'none'
     })
 
-    if (!prompt || prompt.trim().length === 0) {
-      console.error(`❌ [${sessionId}] Prompt validation failed:`, { prompt })
-      throw new Error('Prompt is empty or invalid')
-    }
-    if (!imageDataURL || !imageDataURL.startsWith('data:image/')) {
-      console.error(`❌ [${sessionId}] Image data URL validation failed:`, { 
-        hasImageDataURL: !!imageDataURL,
-        startsWithDataImage: imageDataURL ? imageDataURL.startsWith('data:image/') : false,
-        prefix: imageDataURL ? imageDataURL.substring(0, 50) : 'none'
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length === 0) {
+      console.error(`❌ [${sessionId}] Prompt validation failed:`, {
+        prompt,
+        type: typeof prompt,
+        hasPrompt: !!prompt
       })
-      throw new Error('Image data URL is invalid')
+      throw new Error('Prompt is empty, invalid, or not a string')
+    }
+
+    if (!imageDataURL || typeof imageDataURL !== 'string' || !imageDataURL.startsWith('data:image/')) {
+      console.error(`❌ [${sessionId}] Image data URL validation failed:`, {
+        hasImageDataURL: !!imageDataURL,
+        type: typeof imageDataURL,
+        startsWithDataImage: (imageDataURL && typeof imageDataURL === 'string') ? imageDataURL.startsWith('data:image/') : false,
+        prefix: (imageDataURL && typeof imageDataURL === 'string') ? imageDataURL.substring(0, 50) : 'none'
+      })
+      throw new Error('Image data URL is invalid or not a string')
     }
 
     // Get current model configuration
     const modelConfig = getCurrentModelConfig()
-    console.log(`📝 [${sessionId}] Preparing input for ${modelConfig.name}:`, {
-      promptLength: prompt.length,
+
+    if (!modelConfig) {
+      console.error(`❌ [${sessionId}] Model configuration not found for model: ${selectedModel}`)
+      throw new Error(`Model configuration not found for: ${selectedModel}. Available models: ${Object.keys(AI_MODELS).join(', ')}`)
+    }
+
+    console.log(`📝 [${sessionId}] Preparing input for ${modelConfig.name || 'unknown'}:`, {
+      promptLength: prompt.length, // Safe to access now after validation
       hasImageDataURL: !!imageDataURL,
       model: selectedModel,
-      costRange: modelConfig.costRange
+      costRange: modelConfig.costRange || 'unknown',
+      inputFormat: modelConfig.inputFormat || 'unknown',
+      version: modelConfig.version || 'unknown'
     })
 
     // Create prediction payload based on model format
@@ -288,43 +332,62 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
     if (modelConfig.inputFormat === 'replicate') {
       // GPT-4o-mini format: prompt + image_input
       predictionPayload = {
-        version: modelConfig.version,
+        version: modelConfig.version || '',
         input: {
           prompt: prompt,
           image_input: [imageDataURL],
-          max_completion_tokens: modelConfig.maxTokens,
-          temperature: modelConfig.temperature
+          max_completion_tokens: modelConfig.maxTokens || 1000,
+          temperature: modelConfig.temperature || 0.1
         }
       }
-    } else if (modelConfig.inputFormat === 'claude') {
-      // Claude format on Replicate: prompt + image (simple format)
+    } else if (modelConfig.inputFormat === 'messages') {
+      // Claude format on Replicate: Uses simple prompt + image format
       predictionPayload = {
-        version: modelConfig.version,
         input: {
           prompt: prompt,
           image: imageDataURL,
-          max_tokens: modelConfig.maxTokens,
-          max_image_resolution: 0.5 // Optimize for cost/speed
+          max_tokens: modelConfig.maxTokens || 1500,
+          temperature: modelConfig.temperature || 0.1
         }
       }
     } else {
-      throw new Error(`Unsupported model format: ${modelConfig.inputFormat}`)
+      throw new Error(`Unsupported model format: ${modelConfig.inputFormat || 'unknown'}`)
     }
 
     console.log(`📤 [${sessionId}] Sending prediction payload:`, {
       version: predictionPayload.version,
-      promptLength: predictionPayload.input.prompt.length,
-      imageInputCount: predictionPayload.input.image_input.length,
-      maxTokens: predictionPayload.input.max_completion_tokens,
+      inputFormat: modelConfig.inputFormat,
+      modelName: modelConfig.inputFormat === 'messages' ? modelConfig.version : 'version-based',
+      promptLength: modelConfig.inputFormat === 'replicate' ? predictionPayload.input.prompt.length :
+                   modelConfig.inputFormat === 'messages' ? predictionPayload.input.messages[0].content[0].text.length : 'unknown',
+      imageInputCount: modelConfig.inputFormat === 'replicate' ? predictionPayload.input.image_input?.length :
+                      modelConfig.inputFormat === 'messages' ? 1 : 'unknown',
+      maxTokens: predictionPayload.input.max_completion_tokens || predictionPayload.input.max_tokens,
       temperature: predictionPayload.input.temperature
     })
 
     // Log the full payload structure (without the actual image data for brevity)
-    const payloadForLogging = {
-      ...predictionPayload,
-      input: {
-        ...predictionPayload.input,
-        image_input: ['[IMAGE_DATA_TRUNCATED]'] // Hide actual image data
+    let payloadForLogging
+    if (modelConfig.inputFormat === 'replicate') {
+      payloadForLogging = {
+        ...predictionPayload,
+        input: {
+          ...predictionPayload.input,
+          image_input: ['[IMAGE_DATA_TRUNCATED]'] // Hide actual image data
+        }
+      }
+    } else if (modelConfig.inputFormat === 'messages') {
+      payloadForLogging = {
+        input: {
+          ...predictionPayload.input,
+          messages: [{
+            role: "user",
+            content: [
+              { type: "text", text: "[PROMPT_TRUNCATED]" },
+              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "[IMAGE_DATA_TRUNCATED]" } }
+            ]
+          }]
+        }
       }
     }
     console.log(`📋 [${sessionId}] Full payload structure:`, JSON.stringify(payloadForLogging, null, 2))
@@ -335,12 +398,34 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       throw new Error('Prompt is empty in final payload')
     }
 
-    if (!predictionPayload.input.image_input || predictionPayload.input.image_input.length === 0) {
-      console.error(`❌ [${sessionId}] Final validation failed: image_input array is empty in payload`)
-      throw new Error('Image input array is empty in final payload')
+    // Additional validation for image input based on model format
+    if (modelConfig.inputFormat === 'replicate') {
+      // GPT models use image_input array
+      if (!predictionPayload.input.image_input || predictionPayload.input.image_input.length === 0) {
+        console.error(`❌ [${sessionId}] Final validation failed: image_input array is empty in payload`)
+        throw new Error('Image input array is empty in final payload')
+      }
+    } else if (modelConfig.inputFormat === 'messages') {
+      // Claude models use messages format - validate image content
+      const imageContent = predictionPayload.input.messages[0].content.find(c => c.type === 'image')
+      if (!imageContent || !imageContent.source || !imageContent.source.data) {
+        console.error(`❌ [${sessionId}] Final validation failed: image content is missing in messages`)
+        throw new Error('Image content is missing in messages payload')
+      }
     }
 
-    const predictionResponse = await apiClient.post('/predictions', predictionPayload)
+    // Use different API endpoint for official models vs version-based models
+    let apiEndpoint
+    if (modelConfig.inputFormat === 'messages') {
+      // For official Anthropic models, use the model-specific endpoint
+      apiEndpoint = `/models/${modelConfig.version}/predictions`
+    } else {
+      // For version-based models, use the general predictions endpoint
+      apiEndpoint = '/predictions'
+    }
+
+    console.log(`📡 [${sessionId}] Using API endpoint: ${apiEndpoint}`)
+    const predictionResponse = await apiClient.post(apiEndpoint, predictionPayload)
     const prediction = predictionResponse.data
 
     console.log(`✅ [${sessionId}] Weight estimation prediction created:`, {
@@ -438,8 +523,8 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       }
 
       // Safety check for outputText
-      if (!outputText || outputText.length === 0) {
-        throw new Error(`AI returned empty response. Model: ${selectedModel}, Full result: ${JSON.stringify(result)}`)
+      if (!outputText || typeof outputText !== 'string' || outputText.length === 0) {
+        throw new Error(`AI returned empty or invalid response. Model: ${selectedModel}, Type: ${typeof outputText}, Full result: ${JSON.stringify(result)}`)
       }
 
       console.log(`📝 [${sessionId}] AI response text (first 200 chars):`, outputText.substring(0, Math.min(200, outputText.length)) + '...')
@@ -448,7 +533,7 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       // Extract JSON from the response (AI might include additional text)
       const jsonMatch = outputText.match(/\{[\s\S]*\}/)
 
-      if (jsonMatch) {
+      if (jsonMatch && jsonMatch[0]) {
         console.log(`📝 [${sessionId}] Found JSON match:`, jsonMatch[0].substring(0, 100) + '...')
         const parsedResult = JSON.parse(jsonMatch[0])
 
@@ -563,12 +648,14 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
 
   } catch (error) {
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1)
-    console.error(`❌ [${sessionId}] Weight estimation failed after ${totalTime}s:`, error.message)
+    const errorMessage = error?.message || error?.toString() || 'Unknown error occurred'
+    console.error(`❌ [${sessionId}] Weight estimation failed after ${totalTime}s:`, errorMessage)
+    console.error(`❌ [${sessionId}] Full error object:`, error)
 
-    if (error.response) {
+    if (error?.response) {
       // Server responded with error status
-      const status = error.response.status
-      const message = error.response.data?.detail || error.response.data?.message || error.response.statusText
+      const status = error.response?.status || 'unknown'
+      const message = error.response?.data?.detail || error.response?.data?.message || error.response?.statusText || 'Unknown server error'
 
       console.error(`🔥 [${sessionId}] Server error:`, {
         status,
