@@ -4,7 +4,7 @@ import axios from 'axios'
 const API_CONFIG = {
   baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate', // Use proxy in dev, direct in prod
   timeout: 300000, // 5 minutes timeout
-  apiToken: import.meta.env.VITE_REPLICATE_API_TOKEN || '', // Use environment variable for API token
+  apiToken: '', // Set your Replicate API token here
 }
 
 // Create axios instance with default config
