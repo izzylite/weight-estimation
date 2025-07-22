@@ -12,6 +12,80 @@ const API_CONFIG = {
   apiToken: '', // Set your Replicate API token here
 }
 
+// Available AI models for weight estimation
+const AI_MODELS = {
+  'gpt-4o-mini': {
+    version: '167a3b6f79e1ab52cedcf14cf1b08d63d094958809d9115481623869bc015bd4',
+    name: 'GPT-4o Mini',
+    description: 'Fast and cost-effective analysis',
+    costRange: '$0.01-0.02 per request',
+    inputFormat: 'replicate', // prompt + image_input format
+    maxTokens: 1000,
+    temperature: 0.1,
+    recommended: true
+  },
+  'claude-4-sonnet': {
+    version: 'ca312200fcb03d97da08cf9dec3a4f7ff3be5bddd0e8ff6c9198b563a28b2559',
+    name: 'Claude 4 Sonnet',
+    description: 'Superior reasoning and analysis',
+    costRange: '$0.02-0.04 per request',
+    inputFormat: 'anthropic', // messages format
+    maxTokens: 1500,
+    temperature: 0.1,
+    recommended: false
+  },
+  'gpt-4o': {
+    version: '24a50d9cb3c11c252902308e2ffa511fc353b24d312fcdebaab457ce96eab1a5',
+    name: 'GPT-4o',
+    description: 'Highest quality analysis',
+    costRange: '$0.05-0.10 per request',
+    inputFormat: 'openai', // messages format
+    maxTokens: 2000,
+    temperature: 0.1,
+    recommended: false
+  }
+}
+
+// Default model
+let selectedModel = 'gpt-4o-mini'
+
+/**
+ * Get available AI models for weight estimation
+ * @returns {Object} Available models with their configurations
+ */
+export const getAvailableModels = () => {
+  return AI_MODELS
+}
+
+/**
+ * Set the AI model to use for weight estimation
+ * @param {string} modelKey - The model key (e.g., 'gpt-4o-mini', 'claude-4-sonnet', 'gpt-4o')
+ */
+export const setEstimationModel = (modelKey) => {
+  if (AI_MODELS[modelKey]) {
+    selectedModel = modelKey
+    console.log(`🤖 Weight estimation model set to: ${AI_MODELS[modelKey].name}`)
+  } else {
+    console.error(`❌ Unknown model: ${modelKey}. Available models:`, Object.keys(AI_MODELS))
+  }
+}
+
+/**
+ * Get the currently selected model
+ * @returns {string} Current model key
+ */
+export const getCurrentModel = () => {
+  return selectedModel
+}
+
+/**
+ * Get the current model configuration
+ * @returns {Object} Current model configuration
+ */
+export const getCurrentModelConfig = () => {
+  return AI_MODELS[selectedModel]
+}
+
 // Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API_CONFIG.baseURL,
@@ -199,21 +273,85 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       throw new Error('Image data URL is invalid')
     }
 
-    // Use GPT-4o-mini for cost-effective analysis with correct Replicate format
-    // Replicate's GPT-4o-mini uses prompt + image_input format, not messages
-    console.log(`📝 [${sessionId}] Preparing input for Replicate GPT-4o-mini:`, {
+    // Get current model configuration
+    const modelConfig = getCurrentModelConfig()
+    console.log(`📝 [${sessionId}] Preparing input for ${modelConfig.name}:`, {
       promptLength: prompt.length,
-      hasImageDataURL: !!imageDataURL
+      hasImageDataURL: !!imageDataURL,
+      model: selectedModel,
+      costRange: modelConfig.costRange
     })
 
-    const predictionPayload = {
-      version: '167a3b6f79e1ab52cedcf14cf1b08d63d094958809d9115481623869bc015bd4', // GPT-4o-mini latest version
-      input: {
-        prompt: prompt,
-        image_input: [imageDataURL], // Array of image data URLs
-        max_completion_tokens: 1000,
-        temperature: 0.1 // Low temperature for consistent analysis
+    // Create prediction payload based on model format
+    let predictionPayload
+
+    if (modelConfig.inputFormat === 'replicate') {
+      // GPT-4o-mini format: prompt + image_input
+      predictionPayload = {
+        version: modelConfig.version,
+        input: {
+          prompt: prompt,
+          image_input: [imageDataURL],
+          max_completion_tokens: modelConfig.maxTokens,
+          temperature: modelConfig.temperature
+        }
       }
+    } else if (modelConfig.inputFormat === 'anthropic') {
+      // Claude format: messages with image
+      predictionPayload = {
+        version: modelConfig.version,
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'image',
+                  source: {
+                    type: 'base64',
+                    media_type: 'image/jpeg',
+                    data: imageDataURL.split(',')[1] // Remove data:image/jpeg;base64, prefix
+                  }
+                },
+                {
+                  type: 'text',
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          max_tokens: modelConfig.maxTokens,
+          temperature: modelConfig.temperature
+        }
+      }
+    } else if (modelConfig.inputFormat === 'openai') {
+      // GPT-4o format: messages with image_url
+      predictionPayload = {
+        version: modelConfig.version,
+        input: {
+          messages: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'text',
+                  text: prompt
+                },
+                {
+                  type: 'image_url',
+                  image_url: {
+                    url: imageDataURL
+                  }
+                }
+              ]
+            }
+          ],
+          max_tokens: modelConfig.maxTokens,
+          temperature: modelConfig.temperature
+        }
+      }
+    } else {
+      throw new Error(`Unsupported model format: ${modelConfig.inputFormat}`)
     }
 
     console.log(`📤 [${sessionId}] Sending prediction payload:`, {

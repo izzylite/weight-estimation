@@ -34,6 +34,7 @@ function App() {
     generateTexture: false,
     qualityMode: 'turbo' // Default to turbo for faster generation
   })
+  const [selectedAiModel, setSelectedAiModel] = useState('gpt-4o-mini')
 
   // Wizard step definitions
   const wizardSteps = [
@@ -151,6 +152,12 @@ function App() {
   const handleSettingsChange = useCallback((settings) => {
     setGenerationSettings(settings)
   }, [])
+
+  const handleModelChange = useCallback((modelKey) => {
+    setSelectedAiModel(modelKey)
+    console.log(`🤖 [App] AI model changed to: ${modelKey}`)
+  }, [])
+
   const handleModeChange = useCallback((mode) => {
     setProcessingMode(mode)
     // Clear any existing model data when switching modes
@@ -472,6 +479,7 @@ function App() {
                     onModeChange={handleModeChange}
                     onSettingsChange={handleSettingsChange}
                     onApiConfigChange={handleApiConfigChange}
+                    onModelChange={handleModelChange}
                     disabled={isGenerating}
                   />
                 )}
