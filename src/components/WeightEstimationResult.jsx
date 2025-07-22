@@ -157,23 +157,7 @@ const WeightEstimationResult = ({
             </div>
           </div>
 
-          {aiModel && (
-            <div className="analysis-card">
-              <h4>🤖 AI Model Used</h4>
-              <div className="detail-row">
-                <span className="label">Model:</span>
-                <span className="value">{aiModel.name}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">Description:</span>
-                <span className="value">{aiModel.description}</span>
-              </div>
-              <div className="detail-row">
-                <span className="label">Cost Range:</span>
-                <span className="value">{aiModel.costRange}</span>
-              </div>
-            </div>
-          )}
+       
 
           <div className="analysis-card">
             <h4>🎯 Confidence Factors</h4>
@@ -216,6 +200,8 @@ const WeightEstimationResult = ({
               </div>
             </div>
           </div>
+
+        
         </div>
 
         {/* AI Reasoning */}
@@ -223,7 +209,19 @@ const WeightEstimationResult = ({
           <h4>🤖 AI Analysis Reasoning</h4>
           <div className="reasoning-text">
             {reasoning}
-          </div>
+          </div> 
+              <div className="detail-row">
+                <span className="label">Model:</span>
+                <span className="value">{aiModel.name}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Description:</span>
+                <span className="value">{aiModel.description}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Cost Range:</span>
+                <span className="value">{aiModel.costRange}</span>
+              </div>
         </div>
 
         {/* Original Image Reference */}
