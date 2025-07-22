@@ -1,5 +1,4 @@
 import axios from 'axios'
-import { getCachedModel, cacheModel } from './modelCache'
 
 // Configuration for the Replicate API
 const API_CONFIG = {
@@ -29,24 +28,20 @@ const parseProgressFromLogs = (logs, elapsedTime) => {
   const diffusionMatch = logs.match(/Diffusion Sampling::\s*(\d+)%\|[^|]*\|\s*(\d+)\/(\d+)/)
   if (diffusionMatch) {
     const [, percentage, current, total] = diffusionMatch
-    const progressInfo = {
+    return {
       status: `Generating 3D Structure (${percentage}%)`,
       details: `Diffusion sampling: ${current}/${total} steps • ${Math.round(elapsedTime / 60)}min elapsed`
     }
-    console.log(`🎯 Parsed diffusion progress: ${percentage}% (${current}/${total})`)
-    return progressInfo
   }
 
   // Parse MC Level (Marching Cubes) progress
   const mcMatch = logs.match(/MC Level [^:]*::\s*(\d+)%\|[^|]*\|\s*(\d+)\/(\d+)/)
   if (mcMatch) {
     const [, percentage, current, total] = mcMatch
-    const progressInfo = {
+    return {
       status: `Creating 3D Mesh (${percentage}%)`,
       details: `Mesh generation: ${current}/${total} vertices • ${Math.round(elapsedTime / 60)}min elapsed`
     }
-    console.log(`🎯 Parsed mesh progress: ${percentage}% (${current}/${total})`)
-    return progressInfo
   }
 
   return null
@@ -112,32 +107,6 @@ export const generateModel = async (imageFile, description = '', options = {}) =
       qualityMode,
       hasDescription: !!description?.trim()
     })
-
-    // Check cache first
-    console.log(`🔍 [${sessionId}] Checking cache for existing 3D model...`)
-    onProgress('Checking cache', 'Looking for previously generated model with same image and settings...')
-
-    const cacheSettings = {
-      removeBackground,
-      generateTexture,
-      qualityMode,
-      description: description?.trim() || ''
-    }
-
-    const cachedModel = await getCachedModel(imageFile, cacheSettings)
-    if (cachedModel) {
-      const totalTime = ((Date.now() - startTime) / 1000).toFixed(1)
-      console.log(`🎉 [${sessionId}] Found cached model! Skipping generation.`)
-      console.log(`⚡ [${sessionId}] Cache hit saved ${totalTime}s of processing time`)
-      onProgress('Using cached model', 'Found previously generated model, loading instantly...')
-
-      // Small delay to show the cache message
-      await new Promise(resolve => setTimeout(resolve, 500))
-
-      return cachedModel.blob
-    }
-
-    console.log(`❌ [${sessionId}] No cached model found, proceeding with generation`)
 
     // Convert image to data URL
     console.log(`🔄 [${sessionId}] Converting image to data URL...`)
@@ -226,7 +195,6 @@ export const generateModel = async (imageFile, description = '', options = {}) =
           // Parse progress from logs and update UI
           const progressInfo = parseProgressFromLogs(newLogs, elapsedTime)
           if (progressInfo) {
-            console.log(`📊 Using detailed progress: ${progressInfo.status}`)
             onProgress(progressInfo.status, progressInfo.details)
             hasDetailedProgress = true
           }
@@ -235,7 +203,6 @@ export const generateModel = async (imageFile, description = '', options = {}) =
 
       // Fall back to time-based progress only if no detailed progress available
       if (!hasDetailedProgress) {
-        console.log(`⏰ Using fallback time-based progress (${elapsedTime}s elapsed)`)
         if (elapsedTime < timeThresholds.phase1) {
           onProgress(`Generating 3D model with ${modelInfo.name}`, 'Analyzing image features and object boundaries...')
         } else if (elapsedTime < timeThresholds.phase2) {
@@ -296,8 +263,8 @@ export const generateModel = async (imageFile, description = '', options = {}) =
     let glbResponse
     try {
 
-      // Strategy 1: Try proxy first for replicate.delivery URLs in development
-      if (downloadUrl.includes('replicate.delivery') && !import.meta.env.PROD) {
+      // Strategy 1: Try proxy first for replicate.delivery URLs (most likely to work)
+      if (downloadUrl.includes('replicate.delivery')) {
         console.log(`🔗 [${sessionId}] Using proxy strategy for replicate.delivery URL`)
         try {
           const proxyUrl = downloadUrl.replace('https://replicate.delivery', '/api/download')
@@ -364,35 +331,6 @@ export const generateModel = async (imageFile, description = '', options = {}) =
       blobSize: `${(blob.size / 1024 / 1024).toFixed(2)} MB`,
       blobType: blob.type
     })
-
-    // Cache the generated model for future use (non-blocking)
-    try {
-      console.log(`💾 [${sessionId}] Caching generated model...`)
-
-      // Define cache settings for this generation
-      const cacheSettings = {
-        removeBackground,
-        generateTexture,
-        qualityMode,
-        description: description?.trim() || ''
-      }
-
-      const cacheSuccess = await cacheModel(imageFile, cacheSettings, blob, {
-        generationTime: totalTime,
-        modelSize: blob.size,
-        qualityMode: qualityMode,
-        sessionId: sessionId
-      })
-
-      if (cacheSuccess) {
-        console.log(`✅ [${sessionId}] Model cached successfully for future use`)
-      } else {
-        console.log(`⚠️ [${sessionId}] Failed to cache model, but generation was successful`)
-      }
-    } catch (cacheError) {
-      console.error(`❌ [${sessionId}] Caching error (non-critical):`, cacheError.message)
-      // Don't throw - caching failure shouldn't break the main flow
-    }
 
     return blob // Return the GLB file as a blob
     
