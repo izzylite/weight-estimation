@@ -29,7 +29,7 @@ const AI_MODELS = {
     name: 'Claude 4 Sonnet',
     description: 'Superior reasoning and analysis',
     costRange: '$0.02-0.04 per request',
-    inputFormat: 'anthropic', // messages format
+    inputFormat: 'claude', // prompt + image format (Replicate's Claude format)
     maxTokens: 1500,
     temperature: 0.1,
     recommended: false
@@ -39,7 +39,7 @@ const AI_MODELS = {
     name: 'GPT-4o',
     description: 'Highest quality analysis',
     costRange: '$0.05-0.10 per request',
-    inputFormat: 'openai', // messages format
+    inputFormat: 'replicate', // Same as GPT-4o-mini: prompt + image_input
     maxTokens: 2000,
     temperature: 0.1,
     recommended: false
@@ -296,58 +296,15 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
           temperature: modelConfig.temperature
         }
       }
-    } else if (modelConfig.inputFormat === 'anthropic') {
-      // Claude format: messages with image
+    } else if (modelConfig.inputFormat === 'claude') {
+      // Claude format on Replicate: prompt + image (simple format)
       predictionPayload = {
         version: modelConfig.version,
         input: {
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'image',
-                  source: {
-                    type: 'base64',
-                    media_type: 'image/jpeg',
-                    data: imageDataURL.split(',')[1] // Remove data:image/jpeg;base64, prefix
-                  }
-                },
-                {
-                  type: 'text',
-                  text: prompt
-                }
-              ]
-            }
-          ],
+          prompt: prompt,
+          image: imageDataURL,
           max_tokens: modelConfig.maxTokens,
-          temperature: modelConfig.temperature
-        }
-      }
-    } else if (modelConfig.inputFormat === 'openai') {
-      // GPT-4o format: messages with image_url
-      predictionPayload = {
-        version: modelConfig.version,
-        input: {
-          messages: [
-            {
-              role: 'user',
-              content: [
-                {
-                  type: 'text',
-                  text: prompt
-                },
-                {
-                  type: 'image_url',
-                  image_url: {
-                    url: imageDataURL
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: modelConfig.maxTokens,
-          temperature: modelConfig.temperature
+          max_image_resolution: 0.5 // Optimize for cost/speed
         }
       }
     } else {
@@ -443,29 +400,56 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
 
     console.log(`🎉 [${sessionId}] Weight estimation succeeded!`)
     console.log(`📦 [${sessionId}] Raw output:`, result.output)
+    console.log(`📦 [${sessionId}] Output type:`, typeof result.output)
+    console.log(`📦 [${sessionId}] Output structure:`, result.output)
+    console.log(`📦 [${sessionId}] Full result structure:`, Object.keys(result))
+    console.log(`📦 [${sessionId}] Model used:`, selectedModel)
 
     // Parse the AI response
     let analysisResult
     try {
-      // Extract text from the response (GPT-4o-mini returns string output)
+      // Extract text from the response - handle different model formats
       let outputText = ''
+
       if (typeof result.output === 'string') {
         outputText = result.output
       } else if (Array.isArray(result.output)) {
         outputText = result.output.join('')
       } else if (result.output && typeof result.output === 'object') {
-        // Handle object response format
-        outputText = JSON.stringify(result.output)
+        // Handle object response format - might be Claude's format
+        if (result.output.content) {
+          outputText = result.output.content
+        } else if (result.output.text) {
+          outputText = result.output.text
+        } else {
+          outputText = JSON.stringify(result.output)
+        }
+      } else if (result.output === null || result.output === undefined) {
+        // Check if Claude returns response in a different field
+        if (result.content) {
+          outputText = result.content
+        } else if (result.text) {
+          outputText = result.text
+        } else {
+          throw new Error(`AI returned null/undefined output. Full result: ${JSON.stringify(result)}`)
+        }
       } else {
-        throw new Error('Unexpected output format from AI')
+        throw new Error(`Unexpected output format from AI: ${typeof result.output}`)
       }
 
-      console.log(`📝 [${sessionId}] AI response text:`, outputText.substring(0, 200) + '...')
+      // Safety check for outputText
+      if (!outputText || outputText.length === 0) {
+        throw new Error(`AI returned empty response. Model: ${selectedModel}, Full result: ${JSON.stringify(result)}`)
+      }
+
+      console.log(`📝 [${sessionId}] AI response text (first 200 chars):`, outputText.substring(0, Math.min(200, outputText.length)) + '...')
+      console.log(`📝 [${sessionId}] AI response length:`, outputText.length)
 
       // Extract JSON from the response (AI might include additional text)
       const jsonMatch = outputText.match(/\{[\s\S]*\}/)
 
       if (jsonMatch) {
+        console.log(`📝 [${sessionId}] Found JSON match:`, jsonMatch[0].substring(0, 100) + '...')
         const parsedResult = JSON.parse(jsonMatch[0])
 
         // Set defaults for new fields if they don't exist (backward compatibility)
