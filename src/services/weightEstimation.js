@@ -2,9 +2,9 @@ import axios from 'axios'
 
 // Configuration for the Replicate API (shared with 3D generation)
 const API_CONFIG = {
-  baseURL: '/api/replicate', // Use Vite proxy to avoid CORS issues
+  baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate', // Use proxy in dev, direct in prod
   timeout: 300000, // 5 minutes timeout
-  apiToken: '', // Set your Replicate API token here
+  apiToken: import.meta.env.VITE_REPLICATE_API_TOKEN || '', // Use environment variable for API token
 }
 
 // Create axios instance with default config

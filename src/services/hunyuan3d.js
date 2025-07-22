@@ -5,7 +5,7 @@ import { getCachedModel, cacheModel } from './modelCache'
 const API_CONFIG = {
   baseURL: import.meta.env.PROD ? 'https://api.replicate.com/v1' : '/api/replicate', // Use proxy in dev, direct in prod
   timeout: 300000, // 5 minutes timeout for 3D generation
-  apiToken: '', // Set your Replicate API token here
+  apiToken: import.meta.env.VITE_REPLICATE_API_TOKEN || '', // Use environment variable for API token
 }
 
 // Create axios instance with default config
