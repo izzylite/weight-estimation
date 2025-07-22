@@ -34,7 +34,7 @@ function App() {
     generateTexture: false,
     qualityMode: 'turbo' // Default to turbo for faster generation
   })
-  const [selectedAiModel, setSelectedAiModel] = useState('gpt-4o-mini')
+
 
   // Wizard step definitions
   const wizardSteps = [
@@ -154,8 +154,8 @@ function App() {
   }, [])
 
   const handleModelChange = useCallback((modelKey) => {
-    setSelectedAiModel(modelKey)
     console.log(`🤖 [App] AI model changed to: ${modelKey}`)
+    // Model selection is now handled by the weightEstimation service and persisted in localStorage
   }, [])
 
   const handleModeChange = useCallback((mode) => {
@@ -292,31 +292,7 @@ function App() {
 
       // Handle weight estimation based on mode and available data
       let weightEstimation
-      if (processingMode === 'import' && !uploadedImage) {
-        console.log(`⚠️ [App-${sessionId}] Import mode without image - using volume-based estimation`)
-        // Create a simple volume-based estimation
-        weightEstimation = {
-          estimatedWeight: analysis.volume * 1000, // Assume 1g/cm³ density
-          unit: 'grams',
-          confidence: 0.5,
-          materialType: 'unknown',
-          density: 1.0,
-          reasoning: 'Weight estimated based on volume only (no image provided for AI analysis). Assumed density of 1g/cm³.',
-          weightRange: {
-            min: analysis.volume * 500,  // 0.5g/cm³
-            max: analysis.volume * 2000  // 2g/cm³
-          },
-          structure: 'unknown',
-          certaintyFactors: {
-            materialIdentification: 0.1,
-            structureAssessment: 0.3,
-            densityEstimation: 0.2
-          },
-          volume: analysis.volume,
-          processingTime: '0.1',
-          sessionId: sessionId
-        }
-      } else if (uploadedImage) {
+      if (uploadedImage) {
         // Use AI estimation with image and 3D model metadata (works for both generate and import modes)
         console.log(`🤖 [App-${sessionId}] Using AI estimation with image and 3D model metadata`)
         weightEstimation = await estimateWeight(uploadedImage, analysis.volume, description, {
@@ -324,29 +300,9 @@ function App() {
           modelMetadata: modelMetadata
         })
       } else {
-        // Fallback for import mode without image - use basic volume-based estimation
-        console.log(`📊 [App-${sessionId}] Using basic volume-based estimation (no image provided)`)
-        weightEstimation = {
-          estimatedWeight: analysis.volume * 1000, // Assume 1g/cm³ density as default
-          unit: 'grams',
-          confidence: 0.4, // Lower confidence without image analysis
-          materialType: 'unknown material',
-          density: 1.0,
-          reasoning: 'Basic volume-based calculation. Estimated density of 1g/cm³ used due to lack of visual material analysis.',
-          weightRange: {
-            min: analysis.volume * 500,  // 0.5g/cm³ (light materials like plastic)
-            max: analysis.volume * 2000  // 2g/cm³ (dense materials like metal)
-          },
-          structure: 'unknown',
-          certaintyFactors: {
-            materialIdentification: 0.1,
-            structureAssessment: 0.2,
-            densityEstimation: 0.3
-          },
-          volume: analysis.volume,
-          processingTime: '0.1',
-          sessionId: sessionId
-        }
+        // No image provided - this should not happen as validation requires image
+        console.error(`❌ [App-${sessionId}] No image provided for AI weight estimation`)
+        throw new Error('Image is required for AI weight estimation. Please upload an image of the object.')
       }
 
       console.log(`✅ [App-${sessionId}] Weight estimation completed:`, {

@@ -2,6 +2,57 @@
   margin: 1rem 0;
 }
 
+.model-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.model-toggle {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+  cursor: pointer;
+  padding: 0.5rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color 0.2s ease;
+}
+
+.model-toggle:hover {
+  color: #10b981;
+}
+
+.model-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.current-model-info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+.current-model-name {
+  font-weight: 600;
+  color: #10b981;
+}
+
+.current-model-cost {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.model-content {
+  margin-top: 1rem;
+}
+
 .model-cards {
   display: grid;
   gap: 1rem;
@@ -30,22 +81,14 @@
   box-shadow: 0 0 0 1px #10b981;
 }
 
-.model-card.recommended {
-  border-color: #10b981;
-}
-
-.model-card.recommended:not(.selected) {
-  background: #f0fdf4;
-}
-
-.model-header {
+.model-card .model-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 0.75rem;
 }
 
-.model-name {
+.model-card .model-name {
   font-weight: 600;
   color: #1f2937;
   font-size: 1.1rem;
@@ -53,15 +96,6 @@
   align-items: center;
   gap: 0.5rem;
   flex-wrap: wrap;
-}
-
-.recommended-badge {
-  background: #10b981;
-  color: white;
-  font-size: 0.75rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 500;
 }
 
 .selected-badge {
@@ -157,7 +191,19 @@
     gap: 0.5rem;
   }
 
-  .model-name {
+  .current-model-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .model-card .model-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .model-card .model-name {
     flex-direction: column;
     align-items: flex-start;
   }

@@ -4,16 +4,12 @@ import './DescriptionInput.css'
 const DescriptionInput = ({ onDescriptionChange, disabled = false, value = '' }) => {
   const [description, setDescription] = useState(value)
   const [charCount, setCharCount] = useState(value.length)
-  
-  const maxLength = 500
 
   const handleChange = (e) => {
     const newValue = e.target.value
-    if (newValue.length <= maxLength) {
-      setDescription(newValue)
-      setCharCount(newValue.length)
-      onDescriptionChange(newValue)
-    }
+    setDescription(newValue)
+    setCharCount(newValue.length)
+    onDescriptionChange(newValue)
   }
 
   const handleClear = () => {
@@ -29,7 +25,7 @@ const DescriptionInput = ({ onDescriptionChange, disabled = false, value = '' })
           📝 Description
         </label>
         <span className="char-counter">
-          {charCount}/{maxLength}
+          {charCount} characters
         </span>
       </div>
 

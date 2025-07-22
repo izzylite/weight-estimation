@@ -40,7 +40,8 @@ const WeightEstimationResult = ({
     labelVolume,
     volumeValidation,
     containerType,
-    liquidContent
+    liquidContent,
+    aiModel
   } = weightResult
 
   const confidencePercentage = (confidence * 100).toFixed(1)
@@ -155,6 +156,24 @@ const WeightEstimationResult = ({
               <span className="value">{processingTime}s</span>
             </div>
           </div>
+
+          {aiModel && (
+            <div className="analysis-card">
+              <h4>🤖 AI Model Used</h4>
+              <div className="detail-row">
+                <span className="label">Model:</span>
+                <span className="value">{aiModel.name}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Description:</span>
+                <span className="value">{aiModel.description}</span>
+              </div>
+              <div className="detail-row">
+                <span className="label">Cost Range:</span>
+                <span className="value">{aiModel.costRange}</span>
+              </div>
+            </div>
+          )}
 
           <div className="analysis-card">
             <h4>🎯 Confidence Factors</h4>

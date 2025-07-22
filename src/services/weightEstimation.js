@@ -21,8 +21,7 @@ const AI_MODELS = {
     costRange: '$0.01-0.02 per request',
     inputFormat: 'replicate', // prompt + image_input format
     maxTokens: 1000,
-    temperature: 0.1,
-    recommended: true
+    temperature: 0.1
   },
   'claude-4-sonnet': {
     version: 'anthropic/claude-4-sonnet', // Use Claude 4 Sonnet
@@ -31,8 +30,7 @@ const AI_MODELS = {
     costRange: '$0.02-0.04 per request',
     inputFormat: 'messages', // Uses Anthropic Messages API format
     maxTokens: 1500,
-    temperature: 0.1,
-    recommended: false
+    temperature: 0.1
   },
   'gpt-4o': {
     version: '24a50d9cb3c11c252902308e2ffa511fc353b24d312fcdebaab457ce96eab1a5',
@@ -41,13 +39,19 @@ const AI_MODELS = {
     costRange: '$0.05-0.10 per request',
     inputFormat: 'replicate', // Same as GPT-4o-mini: prompt + image_input
     maxTokens: 2000,
-    temperature: 0.1,
-    recommended: false
+    temperature: 0.1
   }
 }
 
-// Default model
-let selectedModel = 'gpt-4o-mini'
+// Default model - load from localStorage if available
+let selectedModel = localStorage.getItem('ai_model_selection') || 'gpt-4o-mini'
+
+// Validate the loaded model exists, fallback to default if not
+if (!AI_MODELS[selectedModel]) {
+  console.warn(`⚠️ Saved model "${selectedModel}" not found, falling back to default`)
+  selectedModel = 'gpt-4o-mini'
+  localStorage.setItem('ai_model_selection', selectedModel)
+}
 
 /**
  * Get available AI models for weight estimation
@@ -64,6 +68,8 @@ export const getAvailableModels = () => {
 export const setEstimationModel = (modelKey) => {
   if (AI_MODELS[modelKey]) {
     selectedModel = modelKey
+    // Save to localStorage for persistence
+    localStorage.setItem('ai_model_selection', modelKey)
     console.log(`🤖 Weight estimation model set to: ${AI_MODELS[modelKey].name}`)
   } else {
     console.error(`❌ Unknown model: ${modelKey}. Available models:`, Object.keys(AI_MODELS))
@@ -358,8 +364,7 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       version: predictionPayload.version,
       inputFormat: modelConfig.inputFormat,
       modelName: modelConfig.inputFormat === 'messages' ? modelConfig.version : 'version-based',
-      promptLength: modelConfig.inputFormat === 'replicate' ? predictionPayload.input.prompt.length :
-                   modelConfig.inputFormat === 'messages' ? predictionPayload.input.messages[0].content[0].text.length : 'unknown',
+      promptLength: predictionPayload.input.prompt ? predictionPayload.input.prompt.length : 'unknown',
       imageInputCount: modelConfig.inputFormat === 'replicate' ? predictionPayload.input.image_input?.length :
                       modelConfig.inputFormat === 'messages' ? 1 : 'unknown',
       maxTokens: predictionPayload.input.max_completion_tokens || predictionPayload.input.max_tokens,
@@ -380,37 +385,33 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       payloadForLogging = {
         input: {
           ...predictionPayload.input,
-          messages: [{
-            role: "user",
-            content: [
-              { type: "text", text: "[PROMPT_TRUNCATED]" },
-              { type: "image", source: { type: "base64", media_type: "image/jpeg", data: "[IMAGE_DATA_TRUNCATED]" } }
-            ]
-          }]
+          prompt: "[PROMPT_TRUNCATED]",
+          image: "[IMAGE_DATA_TRUNCATED]"
         }
       }
     }
     console.log(`📋 [${sessionId}] Full payload structure:`, JSON.stringify(payloadForLogging, null, 2))
 
     // Validate payload one more time before sending
-    if (!predictionPayload.input.prompt || predictionPayload.input.prompt.trim().length === 0) {
-      console.error(`❌ [${sessionId}] Final validation failed: prompt is empty in payload`)
-      throw new Error('Prompt is empty in final payload')
-    }
-
-    // Additional validation for image input based on model format
     if (modelConfig.inputFormat === 'replicate') {
-      // GPT models use image_input array
+      // GPT models use prompt + image_input
+      if (!predictionPayload.input.prompt || predictionPayload.input.prompt.trim().length === 0) {
+        console.error(`❌ [${sessionId}] Final validation failed: prompt is empty in payload`)
+        throw new Error('Prompt is empty in final payload')
+      }
       if (!predictionPayload.input.image_input || predictionPayload.input.image_input.length === 0) {
         console.error(`❌ [${sessionId}] Final validation failed: image_input array is empty in payload`)
         throw new Error('Image input array is empty in final payload')
       }
     } else if (modelConfig.inputFormat === 'messages') {
-      // Claude models use messages format - validate image content
-      const imageContent = predictionPayload.input.messages[0].content.find(c => c.type === 'image')
-      if (!imageContent || !imageContent.source || !imageContent.source.data) {
-        console.error(`❌ [${sessionId}] Final validation failed: image content is missing in messages`)
-        throw new Error('Image content is missing in messages payload')
+      // Claude models use prompt + image
+      if (!predictionPayload.input.prompt || predictionPayload.input.prompt.trim().length === 0) {
+        console.error(`❌ [${sessionId}] Final validation failed: prompt is empty in payload`)
+        throw new Error('Prompt is empty in final payload')
+      }
+      if (!predictionPayload.input.image || predictionPayload.input.image.length === 0) {
+        console.error(`❌ [${sessionId}] Final validation failed: image is empty in payload`)
+        throw new Error('Image is empty in final payload')
       }
     }
 
@@ -586,7 +587,13 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
           ...parsedResult,
           volume: volume,
           processingTime: ((Date.now() - startTime) / 1000).toFixed(1),
-          sessionId: sessionId
+          sessionId: sessionId,
+          aiModel: {
+            key: selectedModel,
+            name: modelConfig.name,
+            description: modelConfig.description,
+            costRange: modelConfig.costRange
+          }
         }
 
         console.log(`✅ [${sessionId}] Successfully parsed AI analysis:`, {
@@ -601,33 +608,9 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
     } catch (parseError) {
       console.error(`❌ [${sessionId}] Failed to parse AI response:`, parseError)
       console.error(`📄 [${sessionId}] Raw output:`, result.output)
-      // Fallback analysis based on volume
-      analysisResult = {
-        estimatedWeight: volume * 1000, // Assume 1g/cm³ density
-        unit: 'grams',
-        confidence: 0.3,
-        materialType: 'unknown',
-        density: 1.0,
-        reasoning: 'AI analysis failed, using fallback calculation with assumed density of 1g/cm³',
-        weightRange: {
-          min: volume * 500,
-          max: volume * 2000
-        },
-        structure: 'unknown',
-        itemType: 'single',
-        itemCount: 1,
-        individualItemWeight: volume * 1000,
-        packagingWeight: 0,
-        certaintyFactors: {
-          materialIdentification: 0.1,
-          structureAssessment: 0.1,
-          densityEstimation: 0.1,
-          scaleIdentification: 0.1
-        },
-        volume: volume,
-        processingTime: ((Date.now() - startTime) / 1000).toFixed(1),
-        sessionId: sessionId
-      }
+
+      // Throw error instead of using fallback
+      throw new Error(`AI analysis failed to parse response: ${parseError.message}. The AI model may have returned an unexpected format or the response was corrupted.`)
     }
 
     const totalTime = ((Date.now() - startTime) / 1000).toFixed(1)
@@ -643,7 +626,13 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
       ...analysisResult,
       volume: volume,
       processingTime: totalTime,
-      sessionId: sessionId
+      sessionId: sessionId,
+      aiModel: analysisResult.aiModel || {
+        key: selectedModel,
+        name: modelConfig.name,
+        description: modelConfig.description,
+        costRange: modelConfig.costRange
+      }
     }
 
   } catch (error) {
@@ -716,4 +705,13 @@ export const setApiToken = (token) => {
  */
 export const getApiConfig = () => {
   return { ...API_CONFIG }
+}
+
+/**
+ * Clear the saved model selection from localStorage
+ */
+export const clearModelSelection = () => {
+  localStorage.removeItem('ai_model_selection')
+  selectedModel = 'gpt-4o-mini' // Reset to default
+  console.log(`🗑️ Model selection cleared, reset to default: ${AI_MODELS[selectedModel].name}`)
 }
