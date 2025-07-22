@@ -115,21 +115,31 @@ CRITICAL ANALYSIS STEPS:
    - A multi-pack/case (multiple items in packaging like "12x500ml", "6-pack", "case of...")
    - A container with multiple units inside
 
-2. COUNT AND SCALE: If you see text like "12x", "6-pack", "case", or multiple identical items:
+2. EXTRACT VOLUME INFORMATION: Look for volume markings on labels:
+   - Bottles/cans: "500ml", "70cL", "1L", "330ml", etc.
+   - Packages: "12x500ml", "6x330ml", etc.
+   - Convert to cubic units: 1ml = 1cm³, 1cL = 10cm³, 1L = 1000cm³
+   - COMPARE with calculated volume for validation
+
+3. COUNT AND SCALE: If you see text like "12x", "6-pack", "case", or multiple identical items:
    - The volume represents the ENTIRE package/case
    - Divide the total weight by the number of units
    - Consider both the individual items AND the packaging weight
 
-3. MATERIAL ANALYSIS:
+4. MATERIAL ANALYSIS:
    - Primary material type and properties (aluminum, plastic, glass, cardboard, etc.)
    - Packaging materials (cardboard box, plastic wrap, etc.)
    - Object structure (solid, hollow, thick/thin walls)
    - Visual density cues (surface texture, transparency, color)
 
-4. WEIGHT ESTIMATION:
-   - For single items: Use volume × material density
+5. WEIGHT ESTIMATION:
+   - For LIQUID CONTAINERS (bottles, cans with volume markings):
+     * Container weight (glass bottle ~400-600g, aluminum can ~15g, plastic bottle ~30-50g)
+     * Liquid weight = volume × liquid density (water=1g/ml, alcohol=0.8g/ml, etc.)
+     * Total = container + liquid content
+   - For single solid items: Use volume × material density
    - For multi-packs: (Individual item weight × quantity) + packaging weight
-   - Consider typical weight ranges for similar objects
+   - VALIDATE: Compare calculated volume with label volume if visible
    - Account for air gaps in packaging${modelMetadata ? '\n\n5. 3D GEOMETRY ANALYSIS:\n   - Use mesh complexity and surface area for structural assessment\n   - Volume-to-surface ratio helps determine hollow vs solid structures\n   - Multiple mesh components may indicate separate items in a package' : ''}
 
 Provide your analysis in this exact JSON format:
@@ -149,11 +159,16 @@ Provide your analysis in this exact JSON format:
   "itemCount": [number of individual items if multi-pack, 1 if single],
   "individualItemWeight": [weight per item in grams if multi-pack],
   "packagingWeight": [estimated packaging weight in grams],
+  "labelVolume": [volume from label in ml if visible, null if not found],
+  "volumeValidation": "[comparison between calculated and label volume]",
+  "containerType": "[bottle/can/box/other]",
+  "liquidContent": [estimated liquid weight in grams if applicable, 0 if solid],
   "certaintyFactors": {
     "materialIdentification": [0.0 to 1.0],
     "structureAssessment": [0.0 to 1.0],
     "densityEstimation": [0.0 to 1.0],
-    "scaleIdentification": [0.0 to 1.0 - confidence in identifying single vs multi-pack]
+    "scaleIdentification": [0.0 to 1.0 - confidence in identifying single vs multi-pack],
+    "volumeAccuracy": [0.0 to 1.0 - confidence in volume measurement accuracy]
   }
 }
 
@@ -333,9 +348,31 @@ Be precise and consider that the volume calculation is accurate. Focus on materi
           parsedResult.packagingWeight = parsedResult.estimatedWeight * 0.08
         }
 
-        // Add certainty factor for scale identification if missing
-        if (parsedResult.certaintyFactors && parsedResult.certaintyFactors.scaleIdentification === undefined) {
-          parsedResult.certaintyFactors.scaleIdentification = 0.7
+        // Set defaults for new volume-related fields
+        if (parsedResult.labelVolume === undefined) {
+          parsedResult.labelVolume = null
+        }
+
+        if (parsedResult.volumeValidation === undefined) {
+          parsedResult.volumeValidation = 'no label volume found'
+        }
+
+        if (parsedResult.containerType === undefined) {
+          parsedResult.containerType = 'unknown'
+        }
+
+        if (parsedResult.liquidContent === undefined) {
+          parsedResult.liquidContent = 0
+        }
+
+        // Add certainty factors if missing
+        if (parsedResult.certaintyFactors) {
+          if (parsedResult.certaintyFactors.scaleIdentification === undefined) {
+            parsedResult.certaintyFactors.scaleIdentification = 0.7
+          }
+          if (parsedResult.certaintyFactors.volumeAccuracy === undefined) {
+            parsedResult.certaintyFactors.volumeAccuracy = 0.6
+          }
         }
 
         analysisResult = {

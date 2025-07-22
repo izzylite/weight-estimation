@@ -36,7 +36,11 @@ const WeightEstimationResult = ({
     itemType = 'single',
     itemCount = 1,
     individualItemWeight,
-    packagingWeight
+    packagingWeight,
+    labelVolume,
+    volumeValidation,
+    containerType,
+    liquidContent
   } = weightResult
 
   const confidencePercentage = (confidence * 100).toFixed(1)
@@ -122,6 +126,30 @@ const WeightEstimationResult = ({
               <span className="label">Calculated Volume:</span>
               <span className="value">{volume.toFixed(4)} cm³</span>
             </div>
+            {labelVolume && (
+              <>
+                <div className="detail-row">
+                  <span className="label">Label Volume:</span>
+                  <span className="value">{labelVolume} ml</span>
+                </div>
+                <div className="detail-row">
+                  <span className="label">Volume Validation:</span>
+                  <span className="value validation-status">{volumeValidation}</span>
+                </div>
+              </>
+            )}
+            {containerType && containerType !== 'unknown' && (
+              <div className="detail-row">
+                <span className="label">Container Type:</span>
+                <span className="value">{containerType}</span>
+              </div>
+            )}
+            {liquidContent > 0 && (
+              <div className="detail-row">
+                <span className="label">Liquid Content:</span>
+                <span className="value">{formatWeight(liquidContent)}</span>
+              </div>
+            )}
             <div className="detail-row">
               <span className="label">Processing Time:</span>
               <span className="value">{processingTime}s</span>
