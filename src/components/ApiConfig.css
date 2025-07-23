@@ -145,8 +145,17 @@
 
 
 
+.help-content {
+  margin-top: 0.75rem;
+  padding: 1rem;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--border-radius);
+  font-size: 0.875rem;
+}
+
 .help-content a {
-  color: #646cff;
+  color: var(--primary-color);
   text-decoration: none;
   font-weight: 500;
 }
@@ -157,11 +166,20 @@
 
 .help-content p {
   margin: 0.5rem 0;
-  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.help-content p:first-child {
+  margin-top: 0;
+}
+
+.help-content p:last-child {
+  margin-bottom: 0;
 }
 
 .help-content p strong {
-  color: #495057;
+  color: var(--gray-800);
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {

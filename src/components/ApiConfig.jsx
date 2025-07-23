@@ -134,9 +134,22 @@ const ApiConfig = ({ onConfigChange }) => {
               </span>
             ) : (
               <span className="status-text error">
-                ❌ Invalid token or connection failed
+                ❌ Invalid token or connection failed. <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener noreferrer">Get a new API token</a> if needed.
               </span>
             )}
+          </div>
+        )}
+
+        {/* Always show help message when not connected */}
+        {!isValid && !isChecking && !token && (
+          <div className="compact-status">
+            <div className="help-content">
+              <p><strong>How to get your API token:</strong></p>
+              <p>1. Visit <a href="https://replicate.com/account/api-tokens" target="_blank" rel="noopener noreferrer">Replicate API Tokens</a></p>
+              <p>2. Sign in or create an account</p>
+              <p>3. Create a new token and copy it</p>
+              <p>4. Paste it in the field above</p>
+            </div>
           </div>
         )}
 
